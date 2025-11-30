@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, Building2, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/infobarber-logo.jpg";
 
 const benefits = [
@@ -24,6 +25,14 @@ const Register = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signUp, user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -34,17 +43,68 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.password || !formData.shopName) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast({
+        title: "Senha muito curta",
+        description: "A senha deve ter no mínimo 8 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
-    // Simulate registration - Replace with actual auth logic
-    setTimeout(() => {
-      setIsLoading(false);
+    const { error } = await signUp(
+      formData.email, 
+      formData.password, 
+      formData.name,
+      formData.shopName
+    );
+    
+    setIsLoading(false);
+    
+    if (error) {
+      let errorMessage = "Ocorreu um erro ao criar a conta.";
+      
+      if (error.message.includes("already registered")) {
+        errorMessage = "Este email já está cadastrado. Tente fazer login.";
+      } else if (error.message.includes("invalid email")) {
+        errorMessage = "Por favor, insira um email válido.";
+      } else if (error.message.includes("weak password")) {
+        errorMessage = "A senha é muito fraca. Use pelo menos 8 caracteres.";
+      }
+      
       toast({
-        title: "Cadastro simulado",
-        description: "Conecte o Lovable Cloud para ativar autenticação real.",
+        title: "Erro no cadastro",
+        description: errorMessage,
+        variant: "destructive",
       });
-    }, 1000);
+    } else {
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Bem-vindo ao InfoBarber. Você já pode acessar o painel.",
+      });
+      navigate("/dashboard");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-gold">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
