@@ -7,7 +7,7 @@ const testimonials = [
     role: "Dono da Barbearia Santos",
     location: "São Paulo, SP",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    content: "Desde que comecei a usar o BarberPro, minhas faltas diminuíram 80%. Os lembretes automáticos são um game changer.",
+    content: "Desde que comecei a usar o InfoBarber, minhas faltas diminuíram 80%. Os lembretes automáticos são um game changer.",
     rating: 5
   },
   {
@@ -41,7 +41,7 @@ export function TestimonialsSection() {
             O que nossos clientes dizem
           </h2>
           <p className="text-lg text-muted-foreground">
-            Mais de 500 barbearias já transformaram sua gestão com o BarberPro.
+            Mais de 500 barbearias já transformaram sua gestão com o InfoBarber.
           </p>
         </div>
 

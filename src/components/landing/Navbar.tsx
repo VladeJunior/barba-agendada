@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Scissors } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/infobarber-logo.jpg";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,11 +13,9 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-gold flex items-center justify-center">
-              <Scissors className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <img src={logo} alt="InfoBarber" className="w-10 h-10 rounded-lg object-cover" />
             <span className="text-xl font-display font-bold text-foreground">
-              Barber<span className="text-gold">Pro</span>
+              Info<span className="text-gold">Barber</span>
             </span>
           </Link>
 

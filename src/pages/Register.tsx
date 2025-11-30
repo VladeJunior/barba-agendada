@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Scissors, Mail, Lock, User, Building2, ArrowLeft, Check } from "lucide-react";
+import { Mail, Lock, User, Building2, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/infobarber-logo.jpg";
 
 const benefits = [
   "Agendamento online 24/7",
@@ -58,11 +59,9 @@ const Register = () => {
         <div className="relative z-10 max-w-md">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 mb-12">
-            <div className="w-12 h-12 rounded-xl bg-gradient-gold flex items-center justify-center">
-              <Scissors className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <img src={logo} alt="InfoBarber" className="w-12 h-12 rounded-xl object-cover" />
             <span className="text-2xl font-display font-bold text-foreground">
-              Barber<span className="text-gold">Pro</span>
+              Info<span className="text-gold">Barber</span>
             </span>
           </Link>
 
@@ -72,7 +71,7 @@ const Register = () => {
           </h1>
 
           <p className="text-muted-foreground mb-8">
-            Junte-se a mais de 500 barbearias que já utilizam o BarberPro para 
+            Junte-se a mais de 500 barbearias que já utilizam o InfoBarber para 
             gerenciar agendamentos e aumentar o faturamento.
           </p>
 
@@ -105,13 +104,11 @@ const Register = () => {
             <CardHeader className="text-center pb-2">
               {/* Mobile Logo */}
               <div className="flex justify-center mb-4 lg:hidden">
-                <div className="w-14 h-14 rounded-xl bg-gradient-gold flex items-center justify-center">
-                  <Scissors className="w-7 h-7 text-primary-foreground" />
-                </div>
+                <img src={logo} alt="InfoBarber" className="w-16 h-16 rounded-xl object-cover shadow-gold" />
               </div>
               <CardTitle className="text-2xl">Criar conta grátis</CardTitle>
               <CardDescription>
-                Comece a usar o BarberPro agora mesmo
+                Comece a usar o InfoBarber agora mesmo
               </CardDescription>
             </CardHeader>
 
