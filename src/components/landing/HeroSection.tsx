@@ -23,9 +23,9 @@ export function HeroSection() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-8 animate-fade-in">
             <Star className="w-4 h-4 text-gold" />
-            <span className="text-sm text-gold font-medium">
-              +500 barbearias já utilizam
-            </span>
+          <span className="text-sm text-gold font-medium">
+            +500 barbearias já utilizam o InfoBarber
+          </span>
           </div>
 
           {/* Heading */}

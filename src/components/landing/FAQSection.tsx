@@ -12,7 +12,7 @@ const faqs = [
   },
   {
     question: "Preciso instalar algum aplicativo?",
-    answer: "Não! O BarberPro funciona 100% no navegador. Seus clientes agendam pelo link da sua barbearia, sem precisar baixar nada. Você também acessa o painel de qualquer dispositivo."
+    answer: "Não! O InfoBarber funciona 100% no navegador. Seus clientes agendam pelo link da sua barbearia, sem precisar baixar nada. Você também acessa o painel de qualquer dispositivo."
   },
   {
     question: "Como funcionam os lembretes por WhatsApp?",
@@ -45,7 +45,7 @@ export function FAQSection() {
             Perguntas Frequentes
           </h2>
           <p className="text-lg text-muted-foreground">
-            Tire suas dúvidas sobre o BarberPro.
+            Tire suas dúvidas sobre o InfoBarber.
           </p>
         </div>
 

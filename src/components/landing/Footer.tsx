@@ -1,5 +1,6 @@
-import { Scissors, Instagram, Facebook, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Instagram, Facebook, Youtube, Mail, Phone, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/infobarber-logo.jpg";
 
 export function Footer() {
   return (
@@ -9,11 +10,9 @@ export function Footer() {
           {/* Brand */}
           <div>
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-gradient-gold flex items-center justify-center">
-                <Scissors className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <img src={logo} alt="InfoBarber" className="w-10 h-10 rounded-lg object-cover" />
               <span className="text-xl font-display font-bold text-foreground">
-                Barber<span className="text-gold">Pro</span>
+                Info<span className="text-gold">Barber</span>
               </span>
             </Link>
             <p className="text-muted-foreground text-sm mb-6">
@@ -61,7 +60,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Mail className="w-4 h-4 text-gold" />
-                contato@barberpro.com.br
+                contato@infobarber.com.br
               </li>
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Phone className="w-4 h-4 text-gold" />
@@ -78,7 +77,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-muted-foreground text-sm">
-            © 2024 BarberPro. Todos os direitos reservados.
+            © 2024 InfoBarber. Todos os direitos reservados.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Scissors, Mail, Lock, ArrowLeft } from "lucide-react";
+import { Mail, Lock, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/infobarber-logo.jpg";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -49,9 +50,7 @@ const Login = () => {
           <CardHeader className="text-center pb-2">
             {/* Logo */}
             <div className="flex justify-center mb-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-gold flex items-center justify-center">
-                <Scissors className="w-7 h-7 text-primary-foreground" />
-              </div>
+              <img src={logo} alt="InfoBarber" className="w-16 h-16 rounded-xl object-cover shadow-gold" />
             </div>
             <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
             <CardDescription>

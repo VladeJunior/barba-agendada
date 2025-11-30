@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Scissors } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/infobarber-logo.jpg";
 
 export function CTASection() {
   return (
@@ -14,8 +15,8 @@ export function CTASection() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Icon */}
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-gold mb-8 animate-float">
-            <Scissors className="w-8 h-8 text-primary-foreground" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl overflow-hidden mb-8 animate-float shadow-gold">
+            <img src={logo} alt="InfoBarber" className="w-full h-full object-cover" />
           </div>
 
           {/* Heading */}
@@ -26,7 +27,7 @@ export function CTASection() {
 
           {/* Description */}
           <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Junte-se a mais de 500 barbearias que já usam o BarberPro para gerenciar agendamentos, 
+            Junte-se a mais de 500 barbearias que já usam o InfoBarber para gerenciar agendamentos, 
             fidelizar clientes e aumentar o faturamento.
           </p>
 
