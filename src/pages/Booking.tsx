@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { usePublicShopBySlug, usePublicServices, usePublicBarbers } from "@/hooks/usePublicShop";
 import { useCreateAppointment } from "@/hooks/useAppointments";
@@ -88,7 +89,7 @@ export default function Booking() {
           barber_id: selectedBarberId,
           service_id: selectedServiceId,
           client_name: clientName.trim(),
-          client_phone: clientPhone.trim(),
+          client_phone: clientPhone.replace(/\D/g, ""),
           notes: notes.trim() || null,
           start_time: selectedDateTime.toISOString(),
           end_time: endTime.toISOString(),
@@ -158,9 +159,17 @@ export default function Booking() {
               })}
             </p>
           </div>
-          <Button onClick={() => navigate("/")} className="w-full">
-            Voltar ao início
-          </Button>
+          <div className="space-y-3">
+            <Button onClick={() => navigate("/")} className="w-full">
+              Voltar ao início
+            </Button>
+            <Link to="/meus-agendamentos" className="block">
+              <Button variant="outline" className="w-full">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Ver meus agendamentos
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
