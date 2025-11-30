@@ -107,3 +107,29 @@ export function useBarberAppointments(barberId: string | undefined, date: Date |
     enabled: !!barberId && !!date,
   });
 }
+
+export function useBarberBlockedTimes(barberId: string | undefined, date: Date | undefined) {
+  return useQuery({
+    queryKey: ["barber-blocked-times", barberId, date?.toISOString()],
+    queryFn: async () => {
+      if (!barberId || !date) return [];
+
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from("blocked_times")
+        .select("start_time, end_time")
+        .eq("barber_id", barberId)
+        .gte("end_time", startOfDay.toISOString())
+        .lte("start_time", endOfDay.toISOString());
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barberId && !!date,
+  });
+}

@@ -3,7 +3,7 @@ import { format, addDays, isSameDay, setHours, setMinutes, isAfter, isBefore } f
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useBarberWorkingHours, useBarberAppointments } from "@/hooks/usePublicShop";
+import { useBarberWorkingHours, useBarberAppointments, useBarberBlockedTimes } from "@/hooks/usePublicShop";
 
 interface DateTimePickerProps {
   barberId: string;
@@ -17,6 +17,7 @@ export function DateTimePicker({ barberId, serviceDuration, selectedDateTime, on
   
   const { data: workingHours = [] } = useBarberWorkingHours(barberId);
   const { data: appointments = [] } = useBarberAppointments(barberId, selectedDate);
+  const { data: blockedTimes = [] } = useBarberBlockedTimes(barberId, selectedDate);
 
   const workingDays = useMemo(() => {
     return workingHours.map(wh => wh.day_of_week);
@@ -52,7 +53,8 @@ export function DateTimePicker({ barberId, serviceDuration, selectedDateTime, on
       const slotEnd = new Date(currentSlot.getTime() + serviceDuration * 60000);
       
       if (isAfter(currentSlot, now)) {
-        const isAvailable = !appointments.some(apt => {
+        // Check if slot conflicts with existing appointments
+        const conflictsWithAppointment = appointments.some(apt => {
           const aptStart = new Date(apt.start_time);
           const aptEnd = new Date(apt.end_time);
           return (
@@ -62,7 +64,18 @@ export function DateTimePicker({ barberId, serviceDuration, selectedDateTime, on
           );
         });
 
-        if (isAvailable) {
+        // Check if slot conflicts with blocked times
+        const conflictsWithBlocked = blockedTimes.some(bt => {
+          const btStart = new Date(bt.start_time);
+          const btEnd = new Date(bt.end_time);
+          return (
+            (currentSlot >= btStart && currentSlot < btEnd) ||
+            (slotEnd > btStart && slotEnd <= btEnd) ||
+            (currentSlot <= btStart && slotEnd >= btEnd)
+          );
+        });
+
+        if (!conflictsWithAppointment && !conflictsWithBlocked) {
           slots.push(new Date(currentSlot));
         }
       }
@@ -71,7 +84,7 @@ export function DateTimePicker({ barberId, serviceDuration, selectedDateTime, on
     }
 
     return slots;
-  }, [selectedDate, workingHours, appointments, serviceDuration]);
+  }, [selectedDate, workingHours, appointments, blockedTimes, serviceDuration]);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
