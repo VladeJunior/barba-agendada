@@ -137,6 +137,51 @@ export type Database = {
           },
         ]
       }
+      blocked_times: {
+        Row: {
+          barber_id: string
+          created_at: string
+          end_time: string
+          id: string
+          reason: string | null
+          shop_id: string
+          start_time: string
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          reason?: string | null
+          shop_id: string
+          start_time: string
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          reason?: string | null
+          shop_id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_times_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_times_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
