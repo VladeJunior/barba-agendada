@@ -14,6 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          barber_id: string
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          service_id: string
+          shop_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          service_id: string
+          shop_id: string
+          start_time: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          service_id?: string
+          shop_id?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      barbers: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          commission_rate: number | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          shop_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          shop_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          shop_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barbers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -43,6 +166,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      services: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          shop_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+          shop_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          shop_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shops: {
         Row: {
@@ -127,6 +294,54 @@ export type Database = {
           },
         ]
       }
+      working_hours: {
+        Row: {
+          barber_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          shop_id: string
+          start_time: string
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          shop_id: string
+          start_time: string
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          shop_id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "working_hours_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "working_hours_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -144,6 +359,13 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "barber" | "client"
+      appointment_status:
+        | "scheduled"
+        | "confirmed"
+        | "completed"
+        | "cancelled"
+        | "no_show"
+      payment_status: "pending" | "paid" | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -272,6 +494,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "barber", "client"],
+      appointment_status: [
+        "scheduled",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
+      payment_status: ["pending", "paid", "refunded"],
     },
   },
 } as const
