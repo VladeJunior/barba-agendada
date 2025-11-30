@@ -9,7 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Phone, Percent } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock } from "lucide-react";
+import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 
 export default function Team() {
   const { data: barbers = [], isLoading } = useBarbers();
@@ -20,6 +21,7 @@ export default function Team() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [workingHoursBarber, setWorkingHoursBarber] = useState<Barber | null>(null);
 
   const [formData, setFormData] = useState<BarberInput>({
     name: "",
@@ -221,6 +223,14 @@ export default function Team() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setWorkingHoursBarber(barber)}
+                          title="Horários de trabalho"
+                        >
+                          <Clock className="w-4 h-4 text-gold" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => openEditModal(barber)}
                         >
                           <Pencil className="w-4 h-4" />
@@ -280,6 +290,15 @@ export default function Team() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {workingHoursBarber && (
+        <WorkingHoursDialog
+          open={!!workingHoursBarber}
+          onOpenChange={(open) => !open && setWorkingHoursBarber(null)}
+          barberId={workingHoursBarber.id}
+          barberName={workingHoursBarber.name}
+        />
+      )}
     </div>
   );
 }
