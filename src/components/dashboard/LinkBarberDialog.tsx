@@ -14,9 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Link, Unlink, Mail, Loader2, CheckCircle } from "lucide-react";
-import { z } from "zod";
-
-const emailSchema = z.string().email("Email inválido").max(255, "Email muito longo");
 
 interface LinkBarberDialogProps {
   open: boolean;
@@ -27,21 +24,26 @@ interface LinkBarberDialogProps {
     user_id: string | null;
     shop_id: string;
     bio?: string | null;
+    phone?: string | null;
   };
   onSuccess: () => void;
 }
 
 export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: LinkBarberDialogProps) {
-  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
   const { data: shop } = useShop();
 
   const handleSendInvite = async () => {
-    // Validate email
-    const result = emailSchema.safeParse(email.trim());
-    if (!result.success) {
-      toast.error(result.error.errors[0].message);
+    // Validate barber has phone
+    if (!barber.phone) {
+      toast.error("Este barbeiro não possui telefone cadastrado. Adicione um telefone primeiro.");
+      return;
+    }
+
+    // Validate shop has W-API configured
+    if (!shop?.wapi_instance_id || !shop?.wapi_token) {
+      toast.error("Configure o WhatsApp nas Configurações antes de enviar convites.");
       return;
     }
 
@@ -56,9 +58,10 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
       const response = await supabase.functions.invoke("send-barber-invite", {
         body: {
           barber_id: barber.id,
-          email: email.trim().toLowerCase(),
           barber_name: barber.name,
+          barber_phone: barber.phone,
           shop_name: shop?.name || "Barbearia",
+          shop_id: shop?.id,
         },
       });
 
@@ -67,7 +70,7 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
       }
 
       setInviteSent(true);
-      toast.success("Convite enviado com sucesso!");
+      toast.success("Convite enviado via WhatsApp com sucesso!");
       onSuccess();
     } catch (error: any) {
       console.error("Error sending invite:", error);
@@ -109,7 +112,6 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
   };
 
   const handleClose = () => {
-    setEmail("");
     setInviteSent(false);
     onOpenChange(false);
   };
@@ -124,7 +126,7 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
           <DialogDescription>
             {barber.user_id
               ? `${barber.name} já possui acesso ao sistema.`
-              : `Envie um convite por email para ${barber.name} acessar o sistema.`}
+              : `Envie um convite via WhatsApp para ${barber.name} acessar o sistema.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -153,7 +155,7 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
             <Mail className="w-12 h-12 mx-auto mb-4 text-gold" />
             <h3 className="font-medium text-foreground mb-2">Convite Enviado!</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Um email foi enviado para <strong>{email}</strong> com instruções para criar a conta e aceitar o convite.
+              Uma mensagem foi enviada via WhatsApp para <strong>{barber.phone}</strong> com o link para criar a conta e aceitar o convite.
             </p>
             <Button onClick={handleClose} className="bg-gold hover:bg-gold/90">
               Fechar
@@ -163,17 +165,14 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
           <>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email do Barbeiro</Label>
+                <Label>Telefone do Barbeiro</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="barbeiro@email.com"
-                  disabled={isLoading}
+                  value={barber.phone || "Não cadastrado"}
+                  disabled
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  O barbeiro receberá um email com link para criar conta e aceitar o convite.
+                  O barbeiro receberá uma mensagem via WhatsApp com o link para criar sua conta.
                 </p>
               </div>
             </div>
@@ -184,7 +183,7 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
               </Button>
               <Button
                 onClick={handleSendInvite}
-                disabled={isLoading || !email.trim()}
+                disabled={isLoading || !barber.phone}
                 className="bg-gold hover:bg-gold/90"
               >
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
