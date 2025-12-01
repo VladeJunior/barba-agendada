@@ -27,9 +27,6 @@ export function Navbar() {
             <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
               Planos
             </a>
-            <a href="#testimonials" className="text-muted-foreground hover:text-foreground transition-colors">
-              Depoimentos
-            </a>
             <a href="#faq" className="text-muted-foreground hover:text-foreground transition-colors">
               FAQ
             </a>
@@ -63,9 +60,6 @@ export function Navbar() {
               </a>
               <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors py-2">
                 Planos
-              </a>
-              <a href="#testimonials" className="text-muted-foreground hover:text-foreground transition-colors py-2">
-                Depoimentos
               </a>
               <a href="#faq" className="text-muted-foreground hover:text-foreground transition-colors py-2">
                 FAQ
