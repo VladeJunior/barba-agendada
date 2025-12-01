@@ -93,9 +93,10 @@ const handler = async (req: Request): Promise<Response> => {
         currency: "BRL",
       }).format(servicePrice || 0);
 
+      const appUrl = Deno.env.get("APP_URL") || "https://comb-plan.lovable.app";
       const appointmentsUrl = shopSlug 
-        ? `${Deno.env.get("APP_URL") || "https://comb-plan.lovable.app"}/agendar/${shopSlug}/meus-agendamentos`
-        : `${Deno.env.get("APP_URL") || "https://comb-plan.lovable.app"}/meus-agendamentos`;
+        ? `${appUrl}/agendar/${shopSlug}/meus-agendamentos`
+        : `${appUrl}/agendar/${shopSlug}/meus-agendamentos`;
 
       message = `✅ *Agendamento Confirmado!*
 

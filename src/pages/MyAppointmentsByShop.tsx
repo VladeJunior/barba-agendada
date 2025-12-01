@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock, User, Scissors, Phone, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Scissors, Phone, AlertCircle, X, Home, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,11 +110,23 @@ export default function MyAppointmentsByShop() {
                 className="h-10 w-10 rounded-lg object-cover"
               />
             )}
-            <div>
+            <div className="flex-1">
               <h1 className="font-semibold text-foreground">Meus Agendamentos</h1>
               {shop && <p className="text-sm text-muted-foreground">{shop.name}</p>}
             </div>
           </div>
+          
+          {/* Breadcrumb */}
+          {shop && shopSlug && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
+              <Link to={`/agendar/${shopSlug}`} className="hover:text-foreground transition-colors flex items-center gap-1">
+                <Home className="h-4 w-4" />
+                Agendar
+              </Link>
+              <ChevronRight className="h-4 w-4" />
+              <span className="text-foreground">Meus Agendamentos</span>
+            </div>
+          )}
         </div>
       </header>
 
