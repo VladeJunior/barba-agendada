@@ -16,7 +16,9 @@ import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, Ch
 import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
 import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Link as RouterLink } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Team() {
   const { data: barbers = [], isLoading } = useBarbers();
@@ -66,6 +68,15 @@ export default function Team() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate phone if provided
+    if (formData.phone) {
+      const digits = formData.phone.replace(/\D/g, "");
+      if (digits.length !== 10 && digits.length !== 11) {
+        toast.error("Telefone inválido. Use o formato (00) 00000-0000");
+        return;
+      }
+    }
     
     if (editingBarber) {
       await updateBarber.mutateAsync({ id: editingBarber.id, ...formData });
@@ -175,13 +186,16 @@ export default function Team() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
+                  <Label htmlFor="phone">Telefone (WhatsApp)</Label>
+                  <PhoneInput
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="(00) 00000-0000"
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    showValidation={true}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Usado para enviar convites e notificações via WhatsApp
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
@@ -383,6 +397,7 @@ export default function Team() {
             user_id: linkBarber.user_id,
             shop_id: linkBarber.shop_id,
             bio: linkBarber.bio,
+            phone: linkBarber.phone,
           }}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ["barbers"] })}
         />
