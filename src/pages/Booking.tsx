@@ -72,7 +72,7 @@ export default function Booking() {
     }
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (appliedCoupon?: any) => {
     if (!shop || !selectedServiceId || !selectedBarberId || !selectedDateTime || !selectedService) {
       return;
     }
@@ -81,6 +81,18 @@ export default function Booking() {
     
     try {
       const endTime = new Date(selectedDateTime.getTime() + selectedService.duration_minutes * 60000);
+
+      // If coupon was applied, increment usage count
+      if (appliedCoupon) {
+        const { error: couponError } = await supabase
+          .from("loyalty_coupons")
+          .update({ current_uses: appliedCoupon.current_uses + 1 })
+          .eq("id", appliedCoupon.id);
+
+        if (couponError) {
+          console.error("Error updating coupon usage:", couponError);
+        }
+      }
 
       const { error } = await supabase
         .from("appointments")
@@ -258,6 +270,7 @@ export default function Booking() {
 
           {currentStep === 4 && selectedService && selectedBarber && selectedDateTime && (
             <BookingConfirmation
+              shopId={shop.id}
               shopName={shop.name}
               serviceName={selectedService.name}
               servicePrice={selectedService.price}
