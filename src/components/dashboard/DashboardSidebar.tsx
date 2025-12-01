@@ -23,6 +23,7 @@ import {
   DollarSign,
   CreditCard,
   Gift,
+  MessageSquare,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import logo from "@/assets/infobarber-logo.png";
@@ -36,6 +37,7 @@ const ownerMenuItems = [
   { title: "Relatórios", url: "/dashboard/reports", icon: BarChart3 },
   { title: "Fidelidade", url: "/dashboard/loyalty", icon: Gift },
   { title: "Meu Plano", url: "/dashboard/plans", icon: CreditCard },
+  { title: "Suporte", url: "/dashboard/support", icon: MessageSquare },
   { title: "Configurações", url: "/dashboard/settings", icon: Settings },
 ];
 

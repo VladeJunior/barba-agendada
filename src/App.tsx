@@ -35,6 +35,8 @@ import AdminShops from "./pages/admin/AdminShops";
 import AdminShopDetail from "./pages/admin/AdminShopDetail";
 import AdminBilling from "./pages/admin/AdminBilling";
 import AdminMetrics from "./pages/admin/AdminMetrics";
+import AdminSupport from "./pages/admin/AdminSupport";
+import Support from "./pages/dashboard/Support";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +66,7 @@ const App = () => (
               <Route path="reports" element={<Reports />} />
               <Route path="plans" element={<Plans />} />
               <Route path="loyalty" element={<Loyalty />} />
+              <Route path="support" element={<Support />} />
               <Route path="settings" element={<Settings />} />
               {/* Barber Routes */}
               <Route path="my-dashboard" element={<BarberDashboardHome />} />
@@ -78,6 +81,7 @@ const App = () => (
               <Route path="shops/:id" element={<AdminShopDetail />} />
               <Route path="billing" element={<AdminBilling />} />
               <Route path="metrics" element={<AdminMetrics />} />
+              <Route path="support" element={<AdminSupport />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

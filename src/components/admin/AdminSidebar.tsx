@@ -1,4 +1,4 @@
-import { LayoutDashboard, Store, CreditCard, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Store, CreditCard, BarChart3, MessageSquare } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -32,6 +32,11 @@ const adminMenuItems = [
     title: "Métricas",
     url: "/admin/metrics",
     icon: BarChart3,
+  },
+  {
+    title: "Suporte",
+    url: "/admin/support",
+    icon: MessageSquare,
   },
 ];
 

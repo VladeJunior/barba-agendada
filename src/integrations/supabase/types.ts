@@ -708,6 +708,82 @@ export type Database = {
         }
         Relationships: []
       }
+      support_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          shop_id: string
+          status: Database["public"]["Enums"]["conversation_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          shop_id: string
+          status?: Database["public"]["Enums"]["conversation_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          shop_id?: string
+          status?: Database["public"]["Enums"]["conversation_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_conversations_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id: string
+          sender_role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id?: string
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -811,6 +887,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "no_show"
+      conversation_status: "open" | "pending" | "closed"
       payment_status: "pending" | "paid" | "refunded"
       subscription_plan: "essencial" | "profissional" | "elite"
       subscription_status:
@@ -954,6 +1031,7 @@ export const Constants = {
         "cancelled",
         "no_show",
       ],
+      conversation_status: ["open", "pending", "closed"],
       payment_status: ["pending", "paid", "refunded"],
       subscription_plan: ["essencial", "profissional", "elite"],
       subscription_status: [
