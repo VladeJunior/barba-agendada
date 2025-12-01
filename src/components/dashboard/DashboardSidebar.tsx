@@ -36,6 +36,7 @@ const ownerMenuItems = [
 ];
 
 const barberMenuItems = [
+  { title: "Início", url: "/dashboard/my-dashboard", icon: LayoutDashboard },
   { title: "Minha Agenda", url: "/dashboard/my-schedule", icon: Calendar },
   { title: "Minha Comissão", url: "/dashboard/my-commission", icon: DollarSign },
 ];
