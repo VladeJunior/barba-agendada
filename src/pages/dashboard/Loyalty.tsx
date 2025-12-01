@@ -10,6 +10,7 @@ import {
   LoyaltyReward,
   LoyaltyCoupon,
 } from "@/hooks/useLoyalty";
+import { useLoyaltyAnalytics } from "@/hooks/useLoyaltyAnalytics";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +20,19 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Gift, Ticket, Pencil, Trash2, Award, Percent } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Plus, Gift, Ticket, Pencil, Trash2, Award, Percent, TrendingUp, Users } from "lucide-react";
+import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function Loyalty() {
   const { data: shop } = useShop();
   const { data: rewards = [] } = useShopRewards(shop?.id);
   const { data: coupons = [] } = useShopCoupons(shop?.id);
+  
+  const [analyticsStartDate] = useState(startOfMonth(new Date()));
+  const [analyticsEndDate] = useState(endOfMonth(new Date()));
+  const { data: analytics, isLoading: loadingAnalytics } = useLoyaltyAnalytics(analyticsStartDate, analyticsEndDate);
 
   const upsertReward = useUpsertReward();
   const deleteReward = useDeleteReward();
@@ -160,6 +166,10 @@ export default function Loyalty() {
           <TabsTrigger value="coupons">
             <Ticket className="w-4 h-4 mr-2" />
             Cupons
+          </TabsTrigger>
+          <TabsTrigger value="analytics">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Analytics
           </TabsTrigger>
         </TabsList>
 
@@ -332,6 +342,151 @@ export default function Loyalty() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          {loadingAnalytics ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Carregando analytics...</p>
+              </CardContent>
+            </Card>
+          ) : analytics ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total de Resgates</CardTitle>
+                    <Award className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analytics.totalRedemptions}</div>
+                    <p className="text-xs text-muted-foreground">No período selecionado</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analytics.conversionRate}%</div>
+                    <p className="text-xs text-muted-foreground">
+                      {analytics.totalRedemptions} de {analytics.completedAppointments} atendimentos
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pontos Concedidos</CardTitle>
+                    <Gift className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analytics.totalPointsAwarded}</div>
+                    <p className="text-xs text-muted-foreground">Total no período</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pontos Resgatados</CardTitle>
+                    <Award className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analytics.totalPointsRedeemed}</div>
+                    <p className="text-xs text-muted-foreground">Total no período</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resgates por Dia</CardTitle>
+                  <CardDescription>Evolução diária de resgates de recompensas</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={Object.entries(analytics.redemptionsByDate).map(([date, count]) => ({ date, count }))}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--background))", 
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "var(--radius)"
+                        }}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cupons Mais Usados</CardTitle>
+                    <CardDescription>Top 5 cupons com mais utilizações</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {analytics.topCoupons.map((coupon, index) => (
+                        <div key={coupon.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium">{coupon.code}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {coupon.discount_percentage ? `${coupon.discount_percentage}%` : `R$ ${coupon.discount_amount}`}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="secondary">{coupon.current_uses} usos</Badge>
+                        </div>
+                      ))}
+                      {analytics.topCoupons.length === 0 && (
+                        <p className="text-center text-muted-foreground py-4">Nenhum cupom utilizado ainda</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Clientes com Mais Pontos</CardTitle>
+                    <CardDescription>Top 10 clientes fiéis</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {analytics.topClients.slice(0, 5).map((client, index) => (
+                        <div key={client.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium">{client.client_name || "Cliente Anônimo"}</p>
+                              <p className="text-sm text-muted-foreground">{client.client_phone}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-primary">{client.total_points}</p>
+                            <p className="text-xs text-muted-foreground">pontos</p>
+                          </div>
+                        </div>
+                      ))}
+                      {analytics.topClients.length === 0 && (
+                        <p className="text-center text-muted-foreground py-4">Nenhum cliente com pontos ainda</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : null}
         </TabsContent>
       </Tabs>
 
