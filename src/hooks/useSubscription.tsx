@@ -57,6 +57,7 @@ interface SubscriptionData {
   currentPeriodEndsAt: Date | null;
   planLimits: PlanLimits;
   isLoading: boolean;
+  needsPlanSelection: boolean;
 }
 
 export function useSubscription(): SubscriptionData {
@@ -81,6 +82,7 @@ export function useSubscription(): SubscriptionData {
   // Type assertion since database returns string
   const plan = (shop?.plan as SubscriptionPlan) || "essencial";
   const status = (shop?.subscription_status as SubscriptionStatus) || "active";
+  const hasSelectedPlan = shop?.has_selected_plan ?? true;
   const trialEndsAt = shop?.trial_ends_at ? new Date(shop.trial_ends_at) : null;
   const currentPeriodEndsAt = shop?.current_period_ends_at ? new Date(shop.current_period_ends_at) : null;
 
@@ -99,6 +101,7 @@ export function useSubscription(): SubscriptionData {
   }
 
   const canAddBarber = barbersCount < maxBarbers;
+  const needsPlanSelection = !hasSelectedPlan;
 
   return {
     plan,
@@ -112,6 +115,7 @@ export function useSubscription(): SubscriptionData {
     currentPeriodEndsAt,
     planLimits,
     isLoading,
+    needsPlanSelection,
   };
 }
 

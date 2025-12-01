@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             owner_id: data.user!.id,
             name: shopName,
             slug: `${slug}-${Date.now()}`,
+            has_selected_plan: false,
           });
 
         if (!shopError) {

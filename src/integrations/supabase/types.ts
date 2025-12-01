@@ -347,6 +347,7 @@ export type Database = {
           created_at: string
           current_period_ends_at: string | null
           description: string | null
+          has_selected_plan: boolean | null
           id: string
           is_active: boolean
           logo_url: string | null
@@ -374,6 +375,7 @@ export type Database = {
           created_at?: string
           current_period_ends_at?: string | null
           description?: string | null
+          has_selected_plan?: boolean | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -401,6 +403,7 @@ export type Database = {
           created_at?: string
           current_period_ends_at?: string | null
           description?: string | null
+          has_selected_plan?: boolean | null
           id?: string
           is_active?: boolean
           logo_url?: string | null

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useSubscription } from "@/hooks/useSubscription";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import logo from "@/assets/infobarber-logo.jpg";
 export function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
   const { role, isLoading: roleLoading } = useUserRole();
+  const { needsPlanSelection, isLoading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,9 +22,18 @@ export function DashboardLayout() {
     }
   }, [user, loading, navigate]);
 
+  // Redirect to plans page if user hasn't selected a plan yet
+  useEffect(() => {
+    if (subscriptionLoading) return;
+    
+    if (needsPlanSelection && location.pathname !== "/dashboard/plans") {
+      navigate("/dashboard/plans");
+    }
+  }, [needsPlanSelection, subscriptionLoading, location.pathname, navigate]);
+
   // Redirect barbers to their dashboard if they try to access owner-only pages
   useEffect(() => {
-    if (roleLoading || !role) return;
+    if (roleLoading || !role || needsPlanSelection) return;
 
     const ownerOnlyPaths = ["/dashboard/services", "/dashboard/team", "/dashboard/clients", "/dashboard/reports", "/dashboard/settings", "/dashboard/schedule"];
 
@@ -32,14 +43,14 @@ export function DashboardLayout() {
         navigate("/dashboard/my-dashboard");
       }
     }
-  }, [role, roleLoading, location.pathname, navigate]);
+  }, [role, roleLoading, needsPlanSelection, location.pathname, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  if (loading || roleLoading) {
+  if (loading || roleLoading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-gold">Carregando...</div>
@@ -49,6 +60,23 @@ export function DashboardLayout() {
 
   if (!user) {
     return null;
+  }
+
+  // If user needs to select a plan, show minimal layout
+  if (needsPlanSelection) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4">
+          <img src={logo} alt="InfoBarber" className="h-8" />
+          <Button variant="ghost" size="icon" onClick={handleSignOut}>
+            <LogOut className="w-5 h-5" />
+          </Button>
+        </header>
+        <main className="p-6">
+          <Outlet />
+        </main>
+      </div>
+    );
   }
 
   return (
