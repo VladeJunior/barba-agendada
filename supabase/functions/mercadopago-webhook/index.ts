@@ -25,15 +25,26 @@ serve(async (req) => {
 
     // Parse webhook data
     const body = await req.json();
-    console.log("Webhook received:", JSON.stringify(body, null, 2));
+    console.log("=== WEBHOOK RECEIVED ===");
+    console.log("Type:", body.type);
+    console.log("Action:", body.action);
+    console.log("Data ID:", body.data?.id);
+    console.log("Full body:", JSON.stringify(body, null, 2));
 
-    // Mercado Pago sends different types of notifications
-    if (body.type === "payment") {
+    // Handle payment notifications (direct or via action)
+    const isPaymentNotification = 
+      body.type === "payment" || 
+      body.action === "payment.created" || 
+      body.action === "payment.updated";
+
+    if (isPaymentNotification) {
       const paymentId = body.data?.id;
       if (!paymentId) {
         console.log("No payment ID in webhook");
         return new Response("OK", { status: 200 });
       }
+
+      console.log(`Fetching payment details for ID: ${paymentId}`);
 
       // Fetch payment details from Mercado Pago
       const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -43,31 +54,39 @@ serve(async (req) => {
       });
 
       if (!paymentResponse.ok) {
-        console.error("Failed to fetch payment:", paymentResponse.status);
+        const errorText = await paymentResponse.text();
+        console.error("Failed to fetch payment:", paymentResponse.status, errorText);
         return new Response("OK", { status: 200 });
       }
 
       const payment = await paymentResponse.json();
-      console.log("Payment details:", JSON.stringify(payment, null, 2));
+      console.log("=== PAYMENT DETAILS ===");
+      console.log("Status:", payment.status);
+      console.log("Status detail:", payment.status_detail);
+      console.log("Payment type:", payment.payment_type_id);
+      console.log("External reference:", payment.external_reference);
+      console.log("Amount:", payment.transaction_amount);
 
       // Parse external_reference
       let externalRef;
       try {
         externalRef = JSON.parse(payment.external_reference || "{}");
-      } catch {
-        console.error("Failed to parse external_reference");
+      } catch (e) {
+        console.error("Failed to parse external_reference:", e);
         return new Response("OK", { status: 200 });
       }
 
-      const { shop_id, plan_id } = externalRef;
+      const { shop_id, plan_id, user_id } = externalRef;
       if (!shop_id || !plan_id) {
         console.log("Missing shop_id or plan_id in external_reference");
         return new Response("OK", { status: 200 });
       }
 
+      console.log(`Processing payment for shop: ${shop_id}, plan: ${plan_id}`);
+
       // Handle payment status
       if (payment.status === "approved") {
-        console.log(`Payment approved for shop ${shop_id}, plan ${plan_id}`);
+        console.log(`✅ Payment APPROVED for shop ${shop_id}, plan ${plan_id}`);
 
         // Calculate next billing period (30 days from now)
         const currentPeriodEndsAt = new Date();
@@ -78,6 +97,7 @@ serve(async (req) => {
           .update({
             plan: plan_id,
             subscription_status: "active",
+            has_selected_plan: true,
             payment_provider: "mercadopago",
             payment_customer_id: payment.payer?.id?.toString() || null,
             payment_subscription_id: payment.id?.toString() || null,
@@ -87,32 +107,70 @@ serve(async (req) => {
           .eq("id", shop_id);
 
         if (updateError) {
-          console.error("Error updating shop:", updateError);
+          console.error("❌ Error updating shop:", updateError);
         } else {
-          console.log(`Shop ${shop_id} updated to plan ${plan_id} with active status`);
+          console.log(`✅ Shop ${shop_id} updated to plan ${plan_id} with active status`);
         }
       } else if (payment.status === "pending" || payment.status === "in_process") {
-        console.log(`Payment pending for shop ${shop_id}`);
+        console.log(`⏳ Payment PENDING for shop ${shop_id} - status: ${payment.status}, detail: ${payment.status_detail}`);
         
-        const { error: updateError } = await supabase
-          .from("shops")
-          .update({
-            subscription_status: "past_due",
-          })
-          .eq("id", shop_id);
+        // For PIX payments, status will be pending until user pays
+        // Don't change subscription status yet, just log
+        if (payment.payment_type_id === "bank_transfer" || payment.payment_type_id === "pix") {
+          console.log("PIX payment awaiting user action");
+        } else {
+          // For other pending payments, mark as past_due
+          const { error: updateError } = await supabase
+            .from("shops")
+            .update({
+              subscription_status: "past_due",
+            })
+            .eq("id", shop_id);
 
-        if (updateError) {
-          console.error("Error updating shop status:", updateError);
+          if (updateError) {
+            console.error("Error updating shop status:", updateError);
+          }
         }
       } else if (payment.status === "rejected" || payment.status === "cancelled") {
-        console.log(`Payment ${payment.status} for shop ${shop_id}`);
-        // Don't change plan, just log
+        console.log(`❌ Payment ${payment.status} for shop ${shop_id} - detail: ${payment.status_detail}`);
+        // Don't change plan, just log the rejection reason
+      } else {
+        console.log(`Unknown payment status: ${payment.status}`);
       }
     }
 
+    // Handle merchant_order notifications (some integrations use this)
+    if (body.type === "merchant_order") {
+      const orderId = body.data?.id;
+      console.log(`Merchant order notification received: ${orderId}`);
+      
+      // Fetch merchant order details
+      const orderResponse = await fetch(`https://api.mercadopago.com/merchant_orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
+        },
+      });
+
+      if (orderResponse.ok) {
+        const order = await orderResponse.json();
+        console.log("Merchant order details:", JSON.stringify(order, null, 2));
+        
+        // Check if all payments are approved
+        const payments = order.payments || [];
+        const approvedPayments = payments.filter((p: any) => p.status === "approved");
+        
+        if (approvedPayments.length > 0 && order.order_status === "paid") {
+          console.log("Merchant order fully paid, processing...");
+          // The payment webhook should have already handled this
+        }
+      }
+    }
+
+    console.log("=== WEBHOOK PROCESSED ===");
     return new Response("OK", { status: 200, headers: corsHeaders });
   } catch (error) {
     console.error("Webhook error:", error);
+    // Always return 200 to prevent Mercado Pago from retrying
     return new Response("OK", { status: 200 });
   }
 });
