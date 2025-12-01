@@ -78,6 +78,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Build invitation URL using configured APP_URL
     const appUrl = Deno.env.get("APP_URL") || "https://comb-plan.lovable.app";
     const inviteUrl = `${appUrl}/aceitar-convite/${invitation.token}`;
+    
+    console.log("Using APP_URL:", appUrl);
+    console.log("Generated invite URL:", inviteUrl);
 
     // Send email using Resend API directly
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
