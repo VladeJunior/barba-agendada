@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useShop } from "@/hooks/useShop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Link, Unlink } from "lucide-react";
+import { Link, Unlink, Mail, Loader2, CheckCircle } from "lucide-react";
+import { z } from "zod";
+
+const emailSchema = z.string().email("Email inválido").max(255, "Email muito longo");
 
 interface LinkBarberDialogProps {
   open: boolean;
@@ -30,48 +34,44 @@ interface LinkBarberDialogProps {
 export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: LinkBarberDialogProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+  const { data: shop } = useShop();
 
-  const handleLink = async () => {
-    if (!email.trim()) {
-      toast.error("Digite um email válido");
+  const handleSendInvite = async () => {
+    // Validate email
+    const result = emailSchema.safeParse(email.trim());
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
       return;
     }
 
     setIsLoading(true);
     try {
-      // Search for user by email in profiles or auth
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .ilike("full_name", `%${email}%`);
-
-      // Try to find user by checking if they exist (we'll use the email to find them)
-      // Since we can't query auth.users directly, we'll prompt the user to register first
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // For now, let's check if any profile matches
-      // A better approach would be to use an edge function to look up by email
-      
-      // Simplified: Create invitation flow
-      // Update barber with a pending email
-      const { error: updateError } = await supabase
-        .from("barbers")
-        .update({ 
-          bio: barber.bio ? `${barber.bio}\n[Convite pendente: ${email}]` : `[Convite pendente: ${email}]`
-        })
-        .eq("id", barber.id);
+      if (!session) {
+        throw new Error("Sessão expirada. Faça login novamente.");
+      }
 
-      if (updateError) throw updateError;
+      const response = await supabase.functions.invoke("send-barber-invite", {
+        body: {
+          barber_id: barber.id,
+          email: email.trim().toLowerCase(),
+          barber_name: barber.name,
+          shop_name: shop?.name || "Barbearia",
+        },
+      });
 
-      toast.success(
-        "Convite registrado! O barbeiro precisa criar uma conta com este email e depois você poderá vincular.",
-        { duration: 5000 }
-      );
-      
-      setEmail("");
-      onOpenChange(false);
+      if (response.error) {
+        throw new Error(response.error.message || "Erro ao enviar convite");
+      }
+
+      setInviteSent(true);
+      toast.success("Convite enviado com sucesso!");
       onSuccess();
     } catch (error: any) {
-      toast.error("Erro ao vincular: " + error.message);
+      console.error("Error sending invite:", error);
+      toast.error("Erro ao enviar convite: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -98,32 +98,42 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
           .eq("role", "barber");
       }
 
-      toast.success("Barbeiro desvinculado com sucesso!");
+      toast.success("Acesso removido com sucesso!");
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      toast.error("Erro ao desvincular: " + error.message);
+      toast.error("Erro ao remover acesso: " + error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleClose = () => {
+    setEmail("");
+    setInviteSent(false);
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {barber.user_id ? "Gerenciar Acesso" : "Vincular Conta"}
+            {barber.user_id ? "Gerenciar Acesso" : "Convidar Barbeiro"}
           </DialogTitle>
           <DialogDescription>
             {barber.user_id
               ? `${barber.name} já possui acesso ao sistema.`
-              : `Vincule uma conta de usuário para que ${barber.name} acesse o sistema.`}
+              : `Envie um convite por email para ${barber.name} acessar o sistema.`}
           </DialogDescription>
         </DialogHeader>
 
         {barber.user_id ? (
           <div className="py-4">
+            <div className="flex items-center gap-2 text-green-500 mb-4">
+              <CheckCircle className="w-5 h-5" />
+              <span className="text-sm">Barbeiro vinculado com sucesso</span>
+            </div>
             <p className="text-sm text-muted-foreground mb-4">
               Este barbeiro possui acesso ao sistema e pode visualizar sua agenda e comissões.
             </p>
@@ -133,37 +143,52 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
               disabled={isLoading}
               className="w-full"
             >
+              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               <Unlink className="w-4 h-4 mr-2" />
               Remover Acesso
+            </Button>
+          </div>
+        ) : inviteSent ? (
+          <div className="py-6 text-center">
+            <Mail className="w-12 h-12 mx-auto mb-4 text-gold" />
+            <h3 className="font-medium text-foreground mb-2">Convite Enviado!</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Um email foi enviado para <strong>{email}</strong> com instruções para criar a conta e aceitar o convite.
+            </p>
+            <Button onClick={handleClose} className="bg-gold hover:bg-gold/90">
+              Fechar
             </Button>
           </div>
         ) : (
           <>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Email do Barbeiro</Label>
+                <Label htmlFor="email">Email do Barbeiro</Label>
                 <Input
+                  id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
+                  placeholder="barbeiro@email.com"
+                  disabled={isLoading}
                 />
                 <p className="text-xs text-muted-foreground">
-                  O barbeiro deve criar uma conta no sistema com este email para ter acesso.
+                  O barbeiro receberá um email com link para criar conta e aceitar o convite.
                 </p>
               </div>
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={handleClose} disabled={isLoading}>
                 Cancelar
               </Button>
               <Button
-                onClick={handleLink}
+                onClick={handleSendInvite}
                 disabled={isLoading || !email.trim()}
                 className="bg-gold hover:bg-gold/90"
               >
-                <Link className="w-4 h-4 mr-2" />
+                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Mail className="w-4 h-4 mr-2" />
                 Enviar Convite
               </Button>
             </DialogFooter>
