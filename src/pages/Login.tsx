@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import logo from "@/assets/infobarber-logo.jpg";
+import logo from "@/assets/infobarber-logo.png";
 
 const Login = () => {
   const [email, setEmail] = useState("");

@@ -1,6 +1,6 @@
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
-import logo from "@/assets/infobarber-logo.jpg";
+import logo from "@/assets/infobarber-logo.png";
 
 export function Footer() {
   return (
