@@ -2,10 +2,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/infobarber-logo.jpg";
-
 export function CTASection() {
-  return (
-    <section className="py-24 bg-gradient-dark relative overflow-hidden">
+  return <section className="py-24 bg-gradient-dark relative overflow-hidden">
       {/* Decorative Elements */}
       <div className="absolute inset-0 opacity-30">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gold/20 rounded-full blur-3xl" />
@@ -26,10 +24,7 @@ export function CTASection() {
           </h2>
 
           {/* Description */}
-          <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Junte-se a mais de 500 barbearias que já usam o InfoBarber para gerenciar agendamentos, 
-            fidelizar clientes e aumentar o faturamento.
-          </p>
+          <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">Junte-se a mais de 50 barbearias que já usam o InfoBarber para gerenciar agendamentos, fidelizar clientes e aumentar o faturamento.</p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -50,6 +45,5 @@ export function CTASection() {
           </p>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
