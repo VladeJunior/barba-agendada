@@ -26,3 +26,9 @@ verify_jwt = true
 
 [functions.check-payment-status]
 verify_jwt = false
+
+[functions.award-loyalty-points]
+verify_jwt = false
+
+[functions.expire-loyalty-points]
+verify_jwt = false
