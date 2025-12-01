@@ -6,14 +6,27 @@ import { useSupportConversations } from "@/hooks/useSupportConversations";
 import { ConversationList } from "@/components/support/ConversationList";
 import { ChatWindow } from "@/components/support/ChatWindow";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Bell, BellOff, Volume2, VolumeX } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
+import { useBrowserNotification } from "@/hooks/useBrowserNotification";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function AdminSupport() {
   const { conversations, loading, updateStatus } = useSupportConversations();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [filter, setFilter] = useState<"all" | "open" | "pending" | "closed">("all");
+  const { preferences, toggleSound, toggleBrowser } = useNotificationPreferences();
+  const { requestPermission, permission } = useBrowserNotification();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -44,13 +57,87 @@ export default function AdminSupport() {
 
   const counts = getStatusCounts();
 
+  const handleBrowserToggle = async () => {
+    if (!preferences.browserEnabled && permission !== "granted") {
+      const granted = await requestPermission();
+      if (granted) {
+        toggleBrowser();
+      }
+    } else {
+      toggleBrowser();
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Suporte</h1>
-        <p className="text-muted-foreground">
-          Gerencie conversas de suporte com proprietários de barbearias
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Suporte</h1>
+          <p className="text-muted-foreground">
+            Gerencie conversas de suporte com proprietários de barbearias
+          </p>
+        </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              {preferences.soundEnabled || preferences.browserEnabled ? (
+                <Bell className="h-4 w-4" />
+              ) : (
+                <BellOff className="h-4 w-4" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-2">
+              <p className="text-sm font-medium mb-3">Notificações</p>
+              
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {preferences.soundEnabled ? (
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <VolumeX className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <Label htmlFor="sound-toggle" className="text-sm cursor-pointer">
+                    Som
+                  </Label>
+                </div>
+                <Switch
+                  id="sound-toggle"
+                  checked={preferences.soundEnabled}
+                  onCheckedChange={toggleSound}
+                />
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center gap-2">
+                  {preferences.browserEnabled ? (
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <BellOff className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <Label htmlFor="browser-toggle" className="text-sm cursor-pointer">
+                    Navegador
+                  </Label>
+                </div>
+                <Switch
+                  id="browser-toggle"
+                  checked={preferences.browserEnabled}
+                  onCheckedChange={handleBrowserToggle}
+                />
+              </div>
+              
+              {permission === "denied" && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Notificações bloqueadas pelo navegador
+                </p>
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
