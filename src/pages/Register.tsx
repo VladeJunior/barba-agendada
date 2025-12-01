@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, Building2, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import logo from "@/assets/infobarber-logo.jpg";
+import logo from "@/assets/infobarber-logo.png";
 
 const benefits = [
   "Agendamento online 24/7",
