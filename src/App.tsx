@@ -26,6 +26,14 @@ import BarberSchedule from "./pages/dashboard/BarberSchedule";
 import BarberCommission from "./pages/dashboard/BarberCommission";
 import BarberDashboardHome from "./pages/dashboard/BarberDashboardHome";
 
+// Admin imports
+import { AdminLayout } from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminShops from "./pages/admin/AdminShops";
+import AdminShopDetail from "./pages/admin/AdminShopDetail";
+import AdminBilling from "./pages/admin/AdminBilling";
+import AdminMetrics from "./pages/admin/AdminMetrics";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -57,6 +65,15 @@ const App = () => (
               <Route path="my-dashboard" element={<BarberDashboardHome />} />
               <Route path="my-schedule" element={<BarberSchedule />} />
               <Route path="my-commission" element={<BarberCommission />} />
+            </Route>
+
+            {/* Admin Routes - Super Admin Only */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="shops" element={<AdminShops />} />
+              <Route path="shops/:id" element={<AdminShopDetail />} />
+              <Route path="billing" element={<AdminBilling />} />
+              <Route path="metrics" element={<AdminMetrics />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
