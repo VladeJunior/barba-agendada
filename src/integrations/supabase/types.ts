@@ -272,6 +272,8 @@ export type Database = {
           slug: string | null
           state: string | null
           updated_at: string
+          wapi_instance_id: string | null
+          wapi_token: string | null
         }
         Insert: {
           address?: string | null
@@ -288,6 +290,8 @@ export type Database = {
           slug?: string | null
           state?: string | null
           updated_at?: string
+          wapi_instance_id?: string | null
+          wapi_token?: string | null
         }
         Update: {
           address?: string | null
@@ -304,6 +308,8 @@ export type Database = {
           slug?: string | null
           state?: string | null
           updated_at?: string
+          wapi_instance_id?: string | null
+          wapi_token?: string | null
         }
         Relationships: []
       }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useShop } from "@/hooks/useShop";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Settings() {
   const { data: shop, isLoading, refetch } = useShop();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -21,9 +32,14 @@ export default function Settings() {
     city: "",
     state: "",
     slug: "",
+    wapi_instance_id: "",
+    wapi_token: "",
   });
   const [copied, setCopied] = useState(false);
   const [slugError, setSlugError] = useState("");
+  const [showToken, setShowToken] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestingCredentials, setRequestingCredentials] = useState(false);
 
   const bookingUrl = `${window.location.origin}/agendar/${formData.slug}`;
 
@@ -37,6 +53,8 @@ export default function Settings() {
         city: shop.city || "",
         state: shop.state || "",
         slug: shop.slug || "",
+        wapi_instance_id: (shop as any).wapi_instance_id || "",
+        wapi_token: (shop as any).wapi_token || "",
       });
     }
   }, [shop]);
@@ -64,6 +82,30 @@ export default function Settings() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleRequestCredentials = async () => {
+    setRequestingCredentials(true);
+    try {
+      const { error } = await supabase.functions.invoke("request-wapi-credentials", {
+        body: {
+          ownerName: user?.user_metadata?.full_name || user?.email || "Não informado",
+          ownerEmail: user?.email || "",
+          shopName: formData.name,
+          shopPhone: formData.phone,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Solicitação enviada! Aguarde contato por email.");
+      setRequestDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error requesting credentials:", error);
+      toast.error("Erro ao enviar solicitação: " + error.message);
+    } finally {
+      setRequestingCredentials(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shop) return;
@@ -72,7 +114,17 @@ export default function Settings() {
     try {
       const { error } = await supabase
         .from("shops")
-        .update(formData)
+        .update({
+          name: formData.name,
+          description: formData.description,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          slug: formData.slug,
+          wapi_instance_id: formData.wapi_instance_id || null,
+          wapi_token: formData.wapi_token || null,
+        })
         .eq("id", shop.id);
 
       if (error) throw error;
@@ -93,6 +145,8 @@ export default function Settings() {
       </div>
     );
   }
+
+  const isWapiConfigured = formData.wapi_instance_id && formData.wapi_token;
 
   return (
     <div className="space-y-6">
@@ -237,6 +291,104 @@ export default function Settings() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card variant="elevated" className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-gold" />
+              Integração WhatsApp
+              {isWapiConfigured && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-green-500/20 text-green-500 rounded-full">
+                  Configurado
+                </span>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Configure sua conta W-API para enviar mensagens automáticas de confirmação
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="wapi_instance_id">ID da Instância</Label>
+              <Input
+                id="wapi_instance_id"
+                value={formData.wapi_instance_id}
+                onChange={(e) => setFormData({ ...formData, wapi_instance_id: e.target.value })}
+                placeholder="Ex: abc123-instance-id"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wapi_token">Token da Instância</Label>
+              <div className="relative">
+                <Input
+                  id="wapi_token"
+                  type={showToken ? "text" : "password"}
+                  value={formData.wapi_token}
+                  onChange={(e) => setFormData({ ...formData, wapi_token: e.target.value })}
+                  placeholder="••••••••••••••••"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-muted/50 border border-border rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                Não possui credenciais W-API? Solicite abaixo e entraremos em contato.
+              </p>
+              <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" className="gap-2">
+                    <Mail className="w-4 h-4" />
+                    Solicitar ID e Token
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Solicitar Credenciais W-API</DialogTitle>
+                    <DialogDescription>
+                      Enviaremos um email com os dados da sua barbearia para nossa equipe.
+                      Você receberá as credenciais no email cadastrado.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+                      <p><strong>Barbearia:</strong> {formData.name || "Não informado"}</p>
+                      <p><strong>Telefone:</strong> {formData.phone || "Não informado"}</p>
+                      <p><strong>Email:</strong> {user?.email || "Não informado"}</p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setRequestDialogOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleRequestCredentials}
+                      disabled={requestingCredentials}
+                      className="bg-gold hover:bg-gold/90"
+                    >
+                      {requestingCredentials ? "Enviando..." : "Enviar Solicitação"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardContent>
         </Card>
 

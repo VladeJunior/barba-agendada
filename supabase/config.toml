@@ -1,1 +1,7 @@
 project_id = "pyizjlioocxfjvnosxqy"
+
+[functions.request-wapi-credentials]
+verify_jwt = false
+
+[functions.send-whatsapp]
+verify_jwt = false
