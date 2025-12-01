@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,23 @@ import { SubscriptionPlan } from "@/hooks/useSubscription";
 import { useQueryClient } from "@tanstack/react-query";
 
 const MERCADOPAGO_PUBLIC_KEY = "APP_USR-750e65d0-aa7f-41d7-b3e7-914407072252";
+
+// Load Mercado Pago SDK dynamically
+const loadMercadoPagoSDK = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (window.MercadoPago) {
+      resolve();
+      return;
+    }
+    
+    const script = document.createElement("script");
+    script.src = "https://sdk.mercadopago.com/js/v2";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Mercado Pago SDK"));
+    document.head.appendChild(script);
+  });
+};
 
 interface TransparentCheckoutProps {
   planId: SubscriptionPlan;
@@ -38,6 +55,18 @@ export function TransparentCheckout({
   const [copied, setCopied] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const [sdkLoaded, setSdkLoaded] = useState(false);
+  const sdkLoadAttempted = useRef(false);
+
+  // Load SDK on mount
+  useEffect(() => {
+    if (sdkLoadAttempted.current) return;
+    sdkLoadAttempted.current = true;
+    
+    loadMercadoPagoSDK()
+      .then(() => setSdkLoaded(true))
+      .catch((err) => console.error("Error loading MP SDK:", err));
+  }, []);
   
   // PIX form
   const [pixCpf, setPixCpf] = useState("");
@@ -226,9 +255,10 @@ export function TransparentCheckout({
     
     setIsLoading(true);
     try {
-      // Initialize MercadoPago SDK
-      if (!window.MercadoPago) {
-        throw new Error("SDK do Mercado Pago não carregado");
+      // Ensure SDK is loaded
+      if (!sdkLoaded || !window.MercadoPago) {
+        await loadMercadoPagoSDK();
+        setSdkLoaded(true);
       }
       
       const mp = new window.MercadoPago(MERCADOPAGO_PUBLIC_KEY, { locale: "pt-BR" });
