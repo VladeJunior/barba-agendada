@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useDashboardMetrics, PeriodType } from "@/hooks/useDashboardMetrics";
 import { useRevenueChart } from "@/hooks/useRevenueChart";
+import { useOperationalMetrics } from "@/hooks/useOperationalMetrics";
 import { TrendingUp, TrendingDown, DollarSign, Calendar as CalendarIcon, Users, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,6 +42,7 @@ export default function Reports() {
 
   const { data: metrics, isLoading } = useDashboardMetrics(period);
   const { data: chartData, isLoading: chartLoading } = useRevenueChart(period, customRange);
+  const { data: operationalData, isLoading: operationalLoading } = useOperationalMetrics(period);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -224,6 +226,7 @@ export default function Reports() {
           <TabsTrigger value="revenue">Faturamento</TabsTrigger>
           <TabsTrigger value="barbers">Barbeiros</TabsTrigger>
           <TabsTrigger value="services">Serviços</TabsTrigger>
+          <TabsTrigger value="operational">Operacional</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="space-y-6">
@@ -467,6 +470,244 @@ export default function Reports() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="operational" className="space-y-6">
+          {operationalLoading ? (
+            <Skeleton className="h-[400px] w-full" />
+          ) : (
+            <>
+              {/* Peak Hours Heatmap */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Análise de Horários de Pico</CardTitle>
+                  <CardDescription>
+                    Horário mais movimentado: <strong>{operationalData?.peakDay}</strong> às <strong>{operationalData?.peakHour}</strong> ({operationalData?.peakCount} agendamentos)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-3 mb-6">
+                    {renderMetricCard(
+                      "Horário de Pico",
+                      `${operationalData?.peakDay} - ${operationalData?.peakHour}`,
+                      undefined,
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    {renderMetricCard(
+                      "Agendamentos no Pico",
+                      operationalData?.peakCount || 0,
+                      undefined,
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Horário</TableHead>
+                          <TableHead className="text-center">Dom</TableHead>
+                          <TableHead className="text-center">Seg</TableHead>
+                          <TableHead className="text-center">Ter</TableHead>
+                          <TableHead className="text-center">Qua</TableHead>
+                          <TableHead className="text-center">Qui</TableHead>
+                          <TableHead className="text-center">Sex</TableHead>
+                          <TableHead className="text-center">Sáb</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {operationalData?.heatmapData.map((row) => (
+                          <TableRow key={row.hour}>
+                            <TableCell className="font-medium">{row.hour}</TableCell>
+                            {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => {
+                              const value = row[day] || 0;
+                              const intensity = Math.min(value / 5, 1);
+                              return (
+                                <TableCell 
+                                  key={day} 
+                                  className="text-center"
+                                  style={{
+                                    backgroundColor: value > 0 
+                                      ? `rgba(var(--primary), ${intensity * 0.7})` 
+                                      : 'transparent',
+                                    color: intensity > 0.5 ? 'white' : 'inherit'
+                                  }}
+                                >
+                                  {value}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cancellation Analysis */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Taxa de Cancelamentos e No-Shows</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Taxa de Conclusão</span>
+                          <span className="text-sm font-bold text-green-500">
+                            {operationalData?.completionRate.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full transition-all"
+                            style={{ width: `${operationalData?.completionRate}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Taxa de Cancelamento</span>
+                          <span className="text-sm font-bold text-red-500">
+                            {operationalData?.cancellationRate.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className="bg-red-500 h-2 rounded-full transition-all"
+                            style={{ width: `${operationalData?.cancellationRate}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Taxa de No-Show</span>
+                          <span className="text-sm font-bold text-orange-500">
+                            {operationalData?.noShowRate.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className="bg-orange-500 h-2 rounded-full transition-all"
+                            style={{ width: `${operationalData?.noShowRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Distribuição de Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={operationalData?.statusDistribution || []}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={(entry) => `${entry.name}: ${entry.value}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          <Cell fill="#22c55e" />
+                          <Cell fill="#ef4444" />
+                          <Cell fill="#f97316" />
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Client Analysis */}
+              <div className="grid gap-4 md:grid-cols-3">
+                {renderMetricCard(
+                  "Clientes Únicos",
+                  operationalData?.totalUniqueClients || 0,
+                  undefined,
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                )}
+                {renderMetricCard(
+                  "Novos Clientes",
+                  operationalData?.newClients || 0,
+                  undefined,
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                )}
+                {renderMetricCard(
+                  "Clientes Recorrentes",
+                  operationalData?.returningClients || 0,
+                  undefined,
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Clientes Mais Frequentes</CardTitle>
+                    <CardDescription>Top 10 por número de visitas</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Cliente</TableHead>
+                          <TableHead>Telefone</TableHead>
+                          <TableHead className="text-right">Visitas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {operationalData?.topClients.map((client, idx) => (
+                          <TableRow key={client.phone}>
+                            <TableCell className="font-medium">{client.name}</TableCell>
+                            <TableCell>{client.phone}</TableCell>
+                            <TableCell className="text-right">{client.count}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Maiores Gastadores</CardTitle>
+                    <CardDescription>Top 10 por valor total gasto</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Cliente</TableHead>
+                          <TableHead>Telefone</TableHead>
+                          <TableHead className="text-right">Total Gasto</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {operationalData?.topSpenders.map((client) => (
+                          <TableRow key={client.phone}>
+                            <TableCell className="font-medium">{client.name}</TableCell>
+                            <TableCell>{client.phone}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(client.totalSpent)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>
