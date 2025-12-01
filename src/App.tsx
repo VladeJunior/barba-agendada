@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Booking from "./pages/Booking";
+import BarberProfile from "./pages/BarberProfile";
 import MyAppointments from "./pages/MyAppointments";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/agendar/:shopSlug" element={<Booking />} />
+            <Route path="/agendar/:shopSlug/barbeiro/:barberId" element={<BarberProfile />} />
             <Route path="/meus-agendamentos" element={<MyAppointments />} />
             <Route path="/aceitar-convite/:token" element={<AcceptInvite />} />
             
