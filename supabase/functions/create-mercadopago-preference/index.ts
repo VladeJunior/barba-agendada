@@ -90,6 +90,14 @@ serve(async (req) => {
       payer: {
         email: user.email,
       },
+      payment_methods: {
+        installments: 1,
+        default_installments: 1,
+        excluded_payment_types: [
+          { id: "ticket" },
+          { id: "atm" }
+        ]
+      },
       external_reference: JSON.stringify({
         shop_id: shop.id,
         plan_id: planId,
