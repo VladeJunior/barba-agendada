@@ -80,10 +80,12 @@ const handler = async (req: Request): Promise<Response> => {
         weekday: "long",
         day: "numeric",
         month: "long",
+        timeZone: "America/Sao_Paulo",
       });
       const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
       });
       const formattedPrice = new Intl.NumberFormat("pt-BR", {
         style: "currency",
