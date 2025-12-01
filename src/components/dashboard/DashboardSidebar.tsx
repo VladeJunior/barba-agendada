@@ -20,10 +20,12 @@ import {
   UserCircle,
   Settings,
   BarChart3,
+  DollarSign,
 } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 import logo from "@/assets/infobarber-logo.jpg";
 
-const menuItems = [
+const ownerMenuItems = [
   { title: "Início", url: "/dashboard", icon: LayoutDashboard },
   { title: "Agenda", url: "/dashboard/schedule", icon: Calendar },
   { title: "Serviços", url: "/dashboard/services", icon: Scissors },
@@ -33,10 +35,18 @@ const menuItems = [
   { title: "Configurações", url: "/dashboard/settings", icon: Settings },
 ];
 
+const barberMenuItems = [
+  { title: "Minha Agenda", url: "/dashboard/my-schedule", icon: Calendar },
+  { title: "Minha Comissão", url: "/dashboard/my-commission", icon: DollarSign },
+];
+
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { role } = useUserRole();
+
+  const menuItems = role === "barber" ? barberMenuItems : ownerMenuItems;
 
   const isActive = (path: string) => {
     if (path === "/dashboard") {
@@ -68,7 +78,7 @@ export function DashboardSidebar() {
                   >
                     <NavLink
                       to={item.url}
-                      end={item.url === "/dashboard"}
+                      end={item.url === "/dashboard" || item.url === "/dashboard/my-schedule"}
                       className="hover:bg-muted/50"
                       activeClassName="bg-gold/10 text-gold"
                     >

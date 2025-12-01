@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBarbers, useCreateBarber, useUpdateBarber, useDeleteBarber, Barber, BarberInput } from "@/hooks/useBarbers";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,21 +10,24 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle } from "lucide-react";
 import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
+import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
 
 export default function Team() {
   const { data: barbers = [], isLoading } = useBarbers();
   const createBarber = useCreateBarber();
   const updateBarber = useUpdateBarber();
   const deleteBarber = useDeleteBarber();
+  const queryClient = useQueryClient();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [workingHoursBarber, setWorkingHoursBarber] = useState<Barber | null>(null);
   const [blockedTimesBarber, setBlockedTimesBarber] = useState<Barber | null>(null);
+  const [linkBarber, setLinkBarber] = useState<Barber | null>(null);
 
   const [formData, setFormData] = useState<BarberInput>({
     name: "",
@@ -241,6 +245,18 @@ export default function Team() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setLinkBarber(barber)}
+                          title={barber.user_id ? "Gerenciar acesso" : "Vincular conta"}
+                        >
+                          {barber.user_id ? (
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Link className="w-4 h-4 text-blue-500" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => openEditModal(barber)}
                         >
                           <Pencil className="w-4 h-4" />
@@ -316,6 +332,21 @@ export default function Team() {
           onOpenChange={(open) => !open && setBlockedTimesBarber(null)}
           barberId={blockedTimesBarber.id}
           barberName={blockedTimesBarber.name}
+        />
+      )}
+
+      {linkBarber && (
+        <LinkBarberDialog
+          open={!!linkBarber}
+          onOpenChange={(open) => !open && setLinkBarber(null)}
+          barber={{
+            id: linkBarber.id,
+            name: linkBarber.name,
+            user_id: linkBarber.user_id,
+            shop_id: linkBarber.shop_id,
+            bio: linkBarber.bio,
+          }}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["barbers"] })}
         />
       )}
     </div>

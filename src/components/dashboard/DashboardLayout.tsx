@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,9 @@ import logo from "@/assets/infobarber-logo.jpg";
 
 export function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
+  const { role, isLoading: roleLoading } = useUserRole();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -17,12 +20,27 @@ export function DashboardLayout() {
     }
   }, [user, loading, navigate]);
 
+  // Redirect barbers to their schedule if they try to access owner-only pages
+  useEffect(() => {
+    if (roleLoading || !role) return;
+
+    const ownerOnlyPaths = ["/dashboard/services", "/dashboard/team", "/dashboard/clients", "/dashboard/reports", "/dashboard/settings"];
+    const barberPaths = ["/dashboard/my-schedule", "/dashboard/my-commission"];
+
+    if (role === "barber") {
+      // Redirect barber from owner-only pages or dashboard home
+      if (ownerOnlyPaths.some(p => location.pathname.startsWith(p)) || location.pathname === "/dashboard") {
+        navigate("/dashboard/my-schedule");
+      }
+    }
+  }, [role, roleLoading, location.pathname, navigate]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-gold">Carregando...</div>

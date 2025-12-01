@@ -20,6 +20,8 @@ import Schedule from "./pages/dashboard/Schedule";
 import Clients from "./pages/dashboard/Clients";
 import Reports from "./pages/dashboard/Reports";
 import Settings from "./pages/dashboard/Settings";
+import BarberSchedule from "./pages/dashboard/BarberSchedule";
+import BarberCommission from "./pages/dashboard/BarberCommission";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,9 @@ const App = () => (
               <Route path="clients" element={<Clients />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
+              {/* Barber Routes */}
+              <Route path="my-schedule" element={<BarberSchedule />} />
+              <Route path="my-commission" element={<BarberCommission />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
