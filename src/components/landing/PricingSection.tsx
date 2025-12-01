@@ -5,55 +5,56 @@ import { Link } from "react-router-dom";
 
 const plans = [
   {
-    name: "Starter",
-    description: "Para barbearias iniciando",
-    price: "Grátis",
-    period: "para sempre",
-    features: [
-      "1 Barbeiro",
-      "50 agendamentos/mês",
-      "Lembretes por email",
-      "Relatórios básicos",
-      "Suporte por email"
-    ],
-    cta: "Começar Grátis",
-    variant: "outline" as const,
-    popular: false
-  },
-  {
-    name: "Professional",
-    description: "Para barbearias em crescimento",
-    price: "R$ 79",
+    name: "Essencial",
+    description: "Para barbearias iniciando a gestão digital",
+    price: "R$ 149",
     period: "/mês",
     features: [
-      "Até 5 Barbeiros",
-      "Agendamentos ilimitados",
-      "Lembretes por WhatsApp",
-      "Relatórios avançados",
-      "Programa de fidelidade",
-      "Suporte prioritário"
+      "Até 3 barbeiros",
+      "Agenda online",
+      "Suporte na própria plataforma",
+      "Lembretes de agendamento via WhatsApp",
     ],
     cta: "Começar Agora",
-    variant: "gold" as const,
-    popular: true
+    variant: "outline" as const,
+    popular: false,
   },
   {
-    name: "Enterprise",
-    description: "Para redes de barbearias",
+    name: "Profissional",
+    description: "Escale sua operação com dados e automações",
     price: "R$ 199",
     period: "/mês",
     features: [
-      "Barbeiros ilimitados",
-      "Multi-unidades",
-      "API personalizada",
-      "Integrações avançadas",
-      "Gerente de conta dedicado",
-      "SLA garantido"
+      "Até 5 barbeiros",
+      "Agenda online",
+      "Suporte preferencial na própria plataforma",
+      "Lembretes de agendamento via WhatsApp",
+      "Envio diário da agenda direto ao barbeiro via WhatsApp",
+      "Teste gratuito de 7 dias",
     ],
-    cta: "Falar com Vendas",
+    cta: "Começar Teste Grátis",
+    variant: "gold" as const,
+    popular: true,
+  },
+  {
+    name: "Elite",
+    description: "Para redes que precisam de padronização e controle",
+    price: "R$ 299",
+    period: "/mês",
+    features: [
+      "Sem limite de barbeiros",
+      "Agenda online",
+      "Suporte preferencial na plataforma e exclusivo via WhatsApp",
+      "Lembretes de agendamento via WhatsApp",
+      "Envio diário da agenda direto ao barbeiro via WhatsApp",
+      "Exclusividade na solicitação de relatórios e melhorias",
+      "Teste gratuito de 7 dias",
+      "E mais...",
+    ],
+    cta: "Começar Teste Grátis",
     variant: "outline" as const,
-    popular: false
-  }
+    popular: false,
+  },
 ];
 
 export function PricingSection() {
@@ -69,7 +70,7 @@ export function PricingSection() {
             Escolha o plano ideal
           </h2>
           <p className="text-lg text-muted-foreground">
-            Comece gratuitamente e evolua conforme sua barbearia cresce. 
+            Planos pensados para cada fase do seu negócio. 
             Sem taxas escondidas, cancele quando quiser.
           </p>
         </div>
@@ -106,8 +107,8 @@ export function PricingSection() {
 
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <li key={featureIndex} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="w-3 h-3 text-gold" />
                       </div>
                       <span className="text-foreground text-sm">{feature}</span>

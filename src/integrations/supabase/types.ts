@@ -345,15 +345,24 @@ export type Database = {
           city: string | null
           cover_url: string | null
           created_at: string
+          current_period_ends_at: string | null
           description: string | null
           id: string
           is_active: boolean
           logo_url: string | null
           name: string
           owner_id: string
+          payment_customer_id: string | null
+          payment_provider: string | null
+          payment_subscription_id: string | null
           phone: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"] | null
           slug: string | null
           state: string | null
+          subscription_status:
+            | Database["public"]["Enums"]["subscription_status"]
+            | null
+          trial_ends_at: string | null
           updated_at: string
           wapi_instance_id: string | null
           wapi_token: string | null
@@ -363,15 +372,24 @@ export type Database = {
           city?: string | null
           cover_url?: string | null
           created_at?: string
+          current_period_ends_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name: string
           owner_id: string
+          payment_customer_id?: string | null
+          payment_provider?: string | null
+          payment_subscription_id?: string | null
           phone?: string | null
+          plan?: Database["public"]["Enums"]["subscription_plan"] | null
           slug?: string | null
           state?: string | null
+          subscription_status?:
+            | Database["public"]["Enums"]["subscription_status"]
+            | null
+          trial_ends_at?: string | null
           updated_at?: string
           wapi_instance_id?: string | null
           wapi_token?: string | null
@@ -381,15 +399,24 @@ export type Database = {
           city?: string | null
           cover_url?: string | null
           created_at?: string
+          current_period_ends_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name?: string
           owner_id?: string
+          payment_customer_id?: string | null
+          payment_provider?: string | null
+          payment_subscription_id?: string | null
           phone?: string | null
+          plan?: Database["public"]["Enums"]["subscription_plan"] | null
           slug?: string | null
           state?: string | null
+          subscription_status?:
+            | Database["public"]["Enums"]["subscription_status"]
+            | null
+          trial_ends_at?: string | null
           updated_at?: string
           wapi_instance_id?: string | null
           wapi_token?: string | null
@@ -500,6 +527,13 @@ export type Database = {
         | "cancelled"
         | "no_show"
       payment_status: "pending" | "paid" | "refunded"
+      subscription_plan: "essencial" | "profissional" | "elite"
+      subscription_status:
+        | "trial"
+        | "active"
+        | "past_due"
+        | "cancelled"
+        | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -636,6 +670,14 @@ export const Constants = {
         "no_show",
       ],
       payment_status: ["pending", "paid", "refunded"],
+      subscription_plan: ["essencial", "profissional", "elite"],
+      subscription_status: [
+        "trial",
+        "active",
+        "past_due",
+        "cancelled",
+        "expired",
+      ],
     },
   },
 } as const

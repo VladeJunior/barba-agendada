@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useBarbers, useCreateBarber, useUpdateBarber, useDeleteBarber, Barber, BarberInput } from "@/hooks/useBarbers";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSubscription, getPlanDisplayName } from "@/hooks/useSubscription";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown } from "lucide-react";
 import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
 import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
+import { Link as RouterLink } from "react-router-dom";
 
 export default function Team() {
   const { data: barbers = [], isLoading } = useBarbers();
@@ -21,6 +24,7 @@ export default function Team() {
   const updateBarber = useUpdateBarber();
   const deleteBarber = useDeleteBarber();
   const queryClient = useQueryClient();
+  const { plan, maxBarbers, barbersUsed, canAddBarber } = useSubscription();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
@@ -99,9 +103,40 @@ export default function Team() {
 
   return (
     <div className="space-y-6">
+      {/* Barber Limit Banner */}
+      {!canAddBarber && (
+        <Card className="border-amber-500/50 bg-amber-500/10">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <div>
+                  <p className="font-medium text-foreground">Limite de barbeiros atingido</p>
+                  <p className="text-sm text-muted-foreground">
+                    Seu plano {getPlanDisplayName(plan)} permite até {maxBarbers} barbeiro{maxBarbers > 1 ? "s" : ""}.
+                    Faça upgrade para adicionar mais.
+                  </p>
+                </div>
+              </div>
+              <Button asChild variant="outline" size="sm" className="border-gold text-gold hover:bg-gold/10">
+                <RouterLink to="/dashboard/plans">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Ver Planos
+                </RouterLink>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Equipe</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-display font-bold text-foreground">Equipe</h1>
+            <Badge variant="secondary" className="text-xs">
+              {barbersUsed} / {maxBarbers === Infinity ? "∞" : maxBarbers}
+            </Badge>
+          </div>
           <p className="text-muted-foreground">Gerencie os barbeiros da sua barbearia</p>
         </div>
         
@@ -110,7 +145,10 @@ export default function Team() {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="bg-gold hover:bg-gold/90 text-primary-foreground">
+            <Button 
+              className="bg-gold hover:bg-gold/90 text-primary-foreground"
+              disabled={!canAddBarber}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Novo Barbeiro
             </Button>
