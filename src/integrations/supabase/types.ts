@@ -345,6 +345,202 @@ export type Database = {
           },
         ]
       }
+      loyalty_coupons: {
+        Row: {
+          code: string
+          created_at: string
+          current_uses: number
+          description: string | null
+          discount_amount: number | null
+          discount_percentage: number | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          shop_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          shop_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          shop_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_coupons_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_points: {
+        Row: {
+          client_name: string | null
+          client_phone: string
+          created_at: string
+          id: string
+          lifetime_points: number
+          shop_id: string
+          total_points: number
+          updated_at: string
+        }
+        Insert: {
+          client_name?: string | null
+          client_phone: string
+          created_at?: string
+          id?: string
+          lifetime_points?: number
+          shop_id: string
+          total_points?: number
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string | null
+          client_phone?: string
+          created_at?: string
+          id?: string
+          lifetime_points?: number
+          shop_id?: string
+          total_points?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_points_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_amount: number | null
+          discount_percentage: number | null
+          id: string
+          is_active: boolean
+          points_required: number
+          shop_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          id?: string
+          is_active?: boolean
+          points_required: number
+          shop_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          id?: string
+          is_active?: boolean
+          points_required?: number
+          shop_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_rewards_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_transactions: {
+        Row: {
+          appointment_id: string | null
+          client_phone: string
+          created_at: string
+          description: string
+          id: string
+          points_change: number
+          reward_id: string | null
+          shop_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_phone: string
+          created_at?: string
+          description: string
+          id?: string
+          points_change: number
+          reward_id?: string | null
+          shop_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_phone?: string
+          created_at?: string
+          description?: string
+          id?: string
+          points_change?: number
+          reward_id?: string | null
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

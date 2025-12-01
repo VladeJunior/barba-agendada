@@ -11,6 +11,7 @@ import { Search, Calendar, Clock, User, Scissors, X, ArrowLeft, Star } from "luc
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { ReviewDialog } from "@/components/booking/ReviewDialog";
+import { LoyaltyCard } from "@/components/loyalty/LoyaltyCard";
 import { useAppointmentReview } from "@/hooks/useBarberReviews";
 import { StarRating } from "@/components/ui/star-rating";
 import {
@@ -71,7 +72,7 @@ export default function MyAppointments() {
           *,
           barber:barbers(name),
           service:services(name, price, duration_minutes),
-          shop:shops(name)
+          shop:shops(id, name)
         `)
         .eq("client_phone", cleanPhone)
         .order("start_time", { ascending: false });
@@ -164,6 +165,13 @@ export default function MyAppointments() {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {appointments && appointments.length > 0 && appointments[0].shop?.id && (
+          <LoyaltyCard
+            shopId={appointments[0].shop.id}
+            clientPhone={searchPhone}
+          />
         )}
 
         {appointments && appointments.length > 0 && (
