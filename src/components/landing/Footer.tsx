@@ -6,7 +6,7 @@ export function Footer() {
   return (
     <footer className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Brand */}
           <div>
             <Link to="/" className="flex items-center gap-2 mb-4">
@@ -43,17 +43,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Company */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-4">Empresa</h3>
-            <ul className="space-y-3">
-              <li><a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">Sobre nós</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">Blog</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">Carreiras</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">Contato</a></li>
-            </ul>
-          </div>
-
           {/* Contact */}
           <div>
             <h3 className="font-semibold text-foreground mb-4">Contato</h3>
@@ -77,7 +66,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-muted-foreground text-sm">
-            © 2024 InfoBarber. Todos os direitos reservados.
+            © 2025 InfoBarber. Todos os direitos reservados.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">
