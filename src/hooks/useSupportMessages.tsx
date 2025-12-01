@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNotificationSound } from "./useNotificationSound";
+import { useBrowserNotification } from "./useBrowserNotification";
+import { useNotificationPreferences } from "./useNotificationPreferences";
 
 export interface SupportMessage {
   id: string;
@@ -18,6 +20,8 @@ export function useSupportMessages(conversationId: string | null, currentUserId?
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { playNotificationSound } = useNotificationSound();
+  const { showNotification } = useBrowserNotification();
+  const { preferences } = useNotificationPreferences();
 
   useEffect(() => {
     if (!conversationId) {
@@ -44,9 +48,17 @@ export function useSupportMessages(conversationId: string | null, currentUserId?
             const newMessage = payload.new as SupportMessage;
             setMessages((prev) => [...prev, newMessage]);
             
-            // Play notification sound if message is from another user
+            // Play notification sound and show browser notification if message is from another user
             if (currentUserId && newMessage.sender_id !== currentUserId) {
               playNotificationSound();
+              
+              // Show browser notification if enabled and page is not visible
+              if (preferences.browserEnabled) {
+                showNotification("Nova Mensagem de Suporte", {
+                  body: newMessage.content.slice(0, 100) + (newMessage.content.length > 100 ? "..." : ""),
+                  tag: `support-${newMessage.conversation_id}`,
+                });
+              }
             }
           } else if (payload.eventType === "UPDATE") {
             setMessages((prev) =>

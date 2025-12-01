@@ -1,9 +1,15 @@
 import { useRef, useCallback } from "react";
+import { useNotificationPreferences } from "./useNotificationPreferences";
 
 export function useNotificationSound() {
   const audioContextRef = useRef<AudioContext | null>(null);
+  const { preferences } = useNotificationPreferences();
 
   const playNotificationSound = useCallback(() => {
+    // Don't play if sound is disabled
+    if (!preferences.soundEnabled) {
+      return;
+    }
     try {
       // Create AudioContext on first use
       if (!audioContextRef.current) {
@@ -44,7 +50,7 @@ export function useNotificationSound() {
     } catch (error) {
       console.error("Error playing notification sound:", error);
     }
-  }, []);
+  }, [preferences.soundEnabled]);
 
   return { playNotificationSound };
 }

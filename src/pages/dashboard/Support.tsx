@@ -9,7 +9,16 @@ import { ConversationList } from "@/components/support/ConversationList";
 import { ChatWindow } from "@/components/support/ChatWindow";
 import { useShop } from "@/hooks/useShop";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus } from "lucide-react";
+import { Plus, Bell, BellOff, Volume2, VolumeX } from "lucide-react";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
+import { useBrowserNotification } from "@/hooks/useBrowserNotification";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 
 export default function Support() {
   const { data: shop } = useShop();
@@ -18,6 +27,8 @@ export default function Support() {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [newSubject, setNewSubject] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { preferences, toggleSound, toggleBrowser } = useNotificationPreferences();
+  const { requestPermission, permission } = useBrowserNotification();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -36,6 +47,17 @@ export default function Support() {
     }
   };
 
+  const handleBrowserToggle = async () => {
+    if (!preferences.browserEnabled && permission !== "granted") {
+      const granted = await requestPermission();
+      if (granted) {
+        toggleBrowser();
+      }
+    } else {
+      toggleBrowser();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -45,7 +67,68 @@ export default function Support() {
             Entre em contato com nossa equipe de suporte
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                {preferences.soundEnabled || preferences.browserEnabled ? (
+                  <Bell className="h-4 w-4" />
+                ) : (
+                  <BellOff className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-2">
+                <p className="text-sm font-medium mb-3">Notificações</p>
+                
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {preferences.soundEnabled ? (
+                      <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <VolumeX className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <Label htmlFor="sound-toggle-owner" className="text-sm cursor-pointer">
+                      Som
+                    </Label>
+                  </div>
+                  <Switch
+                    id="sound-toggle-owner"
+                    checked={preferences.soundEnabled}
+                    onCheckedChange={toggleSound}
+                  />
+                </div>
+                
+                <DropdownMenuSeparator />
+                
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center gap-2">
+                    {preferences.browserEnabled ? (
+                      <Bell className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <BellOff className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <Label htmlFor="browser-toggle-owner" className="text-sm cursor-pointer">
+                      Navegador
+                    </Label>
+                  </div>
+                  <Switch
+                    id="browser-toggle-owner"
+                    checked={preferences.browserEnabled}
+                    onCheckedChange={handleBrowserToggle}
+                  />
+                </div>
+                
+                {permission === "denied" && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Notificações bloqueadas pelo navegador
+                  </p>
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -72,6 +155,7 @@ export default function Support() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card className="h-[600px] overflow-hidden">
