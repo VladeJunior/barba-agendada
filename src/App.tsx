@@ -21,6 +21,7 @@ import Schedule from "./pages/dashboard/Schedule";
 import Clients from "./pages/dashboard/Clients";
 import Reports from "./pages/dashboard/Reports";
 import Settings from "./pages/dashboard/Settings";
+import Plans from "./pages/dashboard/Plans";
 import BarberSchedule from "./pages/dashboard/BarberSchedule";
 import BarberCommission from "./pages/dashboard/BarberCommission";
 import BarberDashboardHome from "./pages/dashboard/BarberDashboardHome";
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="schedule" element={<Schedule />} />
               <Route path="clients" element={<Clients />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="plans" element={<Plans />} />
               <Route path="settings" element={<Settings />} />
               {/* Barber Routes */}
               <Route path="my-dashboard" element={<BarberDashboardHome />} />
