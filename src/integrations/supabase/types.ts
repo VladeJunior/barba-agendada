@@ -119,6 +119,57 @@ export type Database = {
           },
         ]
       }
+      barber_invitations: {
+        Row: {
+          accepted_at: string | null
+          barber_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          shop_id: string
+          status: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          barber_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          shop_id: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          barber_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          shop_id?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_invitations_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barber_invitations_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbers: {
         Row: {
           avatar_url: string | null

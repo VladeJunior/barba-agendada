@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Booking from "./pages/Booking";
 import MyAppointments from "./pages/MyAppointments";
+import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 // Dashboard imports
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/agendar/:shopSlug" element={<Booking />} />
             <Route path="/meus-agendamentos" element={<MyAppointments />} />
+            <Route path="/aceitar-convite/:token" element={<AcceptInvite />} />
             
             {/* Dashboard Routes */}
             <Route path="/dashboard" element={<DashboardLayout />}>
