@@ -17,8 +17,10 @@ import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
 import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { Link as RouterLink } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Team() {
   const { data: barbers = [], isLoading } = useBarbers();
@@ -60,10 +62,28 @@ export default function Team() {
       name: barber.name,
       bio: barber.bio || "",
       phone: barber.phone || "",
+      avatar_url: barber.avatar_url || "",
       commission_rate: barber.commission_rate || 0,
       is_active: barber.is_active,
     });
     setIsModalOpen(true);
+  };
+
+  const handleAvatarUpload = async (url: string) => {
+    if (editingBarber) {
+      try {
+        const { error } = await supabase
+          .from("barbers")
+          .update({ avatar_url: url })
+          .eq("id", editingBarber.id);
+        
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ["barbers"] });
+      } catch (error: any) {
+        console.error("Error updating avatar:", error);
+      }
+    }
+    setFormData({ ...formData, avatar_url: url });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,6 +194,18 @@ export default function Team() {
               </DialogHeader>
               
               <div className="space-y-4 py-4">
+                {editingBarber && (
+                  <ImageUpload
+                    label="Foto do Barbeiro"
+                    bucket="barber-avatars"
+                    path={editingBarber.id}
+                    currentImageUrl={formData.avatar_url || null}
+                    onUploadComplete={handleAvatarUpload}
+                    aspectRatio="square"
+                    maxSizeMB={5}
+                  />
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome</Label>
                   <Input

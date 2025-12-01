@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -299,6 +300,38 @@ export default function Settings() {
     }
   };
 
+  const handleLogoUpload = async (url: string) => {
+    if (!shop) return;
+    
+    try {
+      const { error } = await supabase
+        .from("shops")
+        .update({ logo_url: url })
+        .eq("id", shop.id);
+      
+      if (error) throw error;
+      refetch();
+    } catch (error: any) {
+      console.error("Error updating logo:", error);
+    }
+  };
+
+  const handleCoverUpload = async (url: string) => {
+    if (!shop) return;
+    
+    try {
+      const { error } = await supabase
+        .from("shops")
+        .update({ cover_url: url })
+        .eq("id", shop.id);
+      
+      if (error) throw error;
+      refetch();
+    } catch (error: any) {
+      console.error("Error updating cover:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shop) return;
@@ -350,6 +383,39 @@ export default function Settings() {
 
       <form onSubmit={handleSubmit}>
         <Card variant="elevated">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5 text-gold" />
+              Imagens da Barbearia
+            </CardTitle>
+            <CardDescription>
+              Personalize a aparência da sua barbearia
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <ImageUpload
+              label="Logo"
+              bucket="shop-logos"
+              path={shop?.id || ""}
+              currentImageUrl={shop?.logo_url}
+              onUploadComplete={handleLogoUpload}
+              aspectRatio="square"
+              maxSizeMB={5}
+            />
+
+            <ImageUpload
+              label="Imagem de Capa"
+              bucket="shop-covers"
+              path={shop?.id || ""}
+              currentImageUrl={shop?.cover_url}
+              onUploadComplete={handleCoverUpload}
+              aspectRatio="wide"
+              maxSizeMB={10}
+            />
+          </CardContent>
+        </Card>
+
+        <Card variant="elevated" className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Store className="w-5 h-5 text-gold" />

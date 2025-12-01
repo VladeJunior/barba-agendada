@@ -3,6 +3,7 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useShop } from "@/hooks/useShop";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ export function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
   const { role, isLoading: roleLoading } = useUserRole();
   const { needsPlanSelection, isLoading: subscriptionLoading } = useSubscription();
+  const { data: shop } = useShop();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -67,7 +69,11 @@ export function DashboardLayout() {
     return (
       <div className="min-h-screen bg-background">
         <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4">
-          <img src={logo} alt="InfoBarber" className="h-8" />
+          {shop?.logo_url ? (
+            <img src={shop.logo_url} alt="Logo" className="h-8 w-8 rounded-lg object-cover" />
+          ) : (
+            <img src={logo} alt="InfoBarber" className="h-8" />
+          )}
           <Button variant="ghost" size="icon" onClick={handleSignOut}>
             <LogOut className="w-5 h-5" />
           </Button>
