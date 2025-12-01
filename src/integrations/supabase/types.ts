@@ -170,6 +170,38 @@ export type Database = {
           },
         ]
       }
+      barber_portfolio: {
+        Row: {
+          barber_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url: string
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_portfolio_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barber_reviews: {
         Row: {
           appointment_id: string

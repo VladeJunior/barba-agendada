@@ -12,10 +12,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown, ImageIcon } from "lucide-react";
 import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
 import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
+import { PortfolioDialog } from "@/components/dashboard/PortfolioDialog";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Link as RouterLink } from "react-router-dom";
@@ -36,6 +37,7 @@ export default function Team() {
   const [workingHoursBarber, setWorkingHoursBarber] = useState<Barber | null>(null);
   const [blockedTimesBarber, setBlockedTimesBarber] = useState<Barber | null>(null);
   const [linkBarber, setLinkBarber] = useState<Barber | null>(null);
+  const [portfolioBarber, setPortfolioBarber] = useState<Barber | null>(null);
 
   const [formData, setFormData] = useState<BarberInput>({
     name: "",
@@ -313,6 +315,14 @@ export default function Team() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setPortfolioBarber(barber)}
+                          title="Gerenciar portfólio"
+                        >
+                          <ImageIcon className="w-4 h-4 text-purple-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setWorkingHoursBarber(barber)}
                           title="Horários de trabalho"
                         >
@@ -432,6 +442,15 @@ export default function Team() {
             phone: linkBarber.phone,
           }}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ["barbers"] })}
+        />
+      )}
+
+      {portfolioBarber && (
+        <PortfolioDialog
+          open={!!portfolioBarber}
+          onOpenChange={(open) => !open && setPortfolioBarber(null)}
+          barberId={portfolioBarber.id}
+          barberName={portfolioBarber.name}
         />
       )}
     </div>
