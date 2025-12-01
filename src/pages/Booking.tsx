@@ -116,6 +116,7 @@ export default function Booking() {
         await supabase.functions.invoke("send-whatsapp", {
           body: {
             shopId: shop.id,
+            shopSlug: shopSlug,
             phone: clientPhone.replace(/\D/g, ""),
             clientName: clientName.trim(),
             serviceName: selectedService.name,
@@ -160,7 +161,6 @@ export default function Booking() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <h1 className="text-2xl font-bold text-foreground mb-2">Barbearia não encontrada</h1>
         <p className="text-muted-foreground mb-4">A barbearia que você está procurando não existe ou está inativa.</p>
-        <Button onClick={() => navigate("/")}>Voltar ao início</Button>
       </div>
     );
   }
@@ -190,10 +190,10 @@ export default function Booking() {
             </p>
           </div>
           <div className="space-y-3">
-            <Button onClick={() => navigate("/")} className="w-full">
-              Voltar ao início
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Fazer novo agendamento
             </Button>
-            <Link to="/meus-agendamentos" className="block">
+            <Link to={`/agendar/${shopSlug}/meus-agendamentos`} className="block">
               <Button variant="outline" className="w-full">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Ver meus agendamentos
@@ -210,9 +210,11 @@ export default function Booking() {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => currentStep > 1 ? handleBack() : navigate("/")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+            {currentStep > 1 && (
+              <Button variant="ghost" size="icon" onClick={handleBack}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
             {shop.logo_url && (
               <img 
                 src={shop.logo_url} 
