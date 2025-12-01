@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2 } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,7 @@ export default function Settings() {
   const [loadingQr, setLoadingQr] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connected" | "loading">("loading");
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [testingWhatsApp, setTestingWhatsApp] = useState(false);
 
   const bookingUrl = `${window.location.origin}/agendar/${formData.slug}`;
 
@@ -228,6 +229,43 @@ export default function Settings() {
       toast.error("Erro ao enviar solicitação: " + error.message);
     } finally {
       setRequestingCredentials(false);
+    }
+  };
+
+  const handleTestWhatsApp = async () => {
+    if (!shop?.id) {
+      toast.error("Barbearia não encontrada");
+      return;
+    }
+
+    if (!formData.phone) {
+      toast.error("Configure o telefone da barbearia primeiro");
+      return;
+    }
+
+    if (connectionStatus !== "connected") {
+      toast.error("WhatsApp não está conectado");
+      return;
+    }
+
+    setTestingWhatsApp(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-whatsapp", {
+        body: {
+          shopId: shop.id,
+          phone: formData.phone,
+          message: `✅ Teste de integração InfoBarber\n\nSua integração com WhatsApp está funcionando corretamente!\n\nBarbearia: ${formData.name}`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Mensagem de teste enviada com sucesso!");
+    } catch (error: any) {
+      console.error("Error sending test message:", error);
+      toast.error("Erro ao enviar mensagem: " + error.message);
+    } finally {
+      setTestingWhatsApp(false);
     }
   };
 
@@ -485,7 +523,7 @@ export default function Settings() {
                 <p className="text-sm text-muted-foreground mb-3">
                   Conecte seu WhatsApp escaneando o QR Code
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -499,6 +537,20 @@ export default function Settings() {
                       <QrCode className="w-4 h-4" />
                     )}
                     Conectar WhatsApp
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleTestWhatsApp}
+                    disabled={testingWhatsApp || connectionStatus !== "connected"}
+                  >
+                    {testingWhatsApp ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    Testar WhatsApp
                   </Button>
                   <Button
                     type="button"
