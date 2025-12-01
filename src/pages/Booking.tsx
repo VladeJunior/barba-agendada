@@ -201,6 +201,13 @@ export default function Booking() {
             <Button variant="ghost" size="icon" onClick={() => currentStep > 1 ? handleBack() : navigate("/")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
+            {shop.logo_url && (
+              <img 
+                src={shop.logo_url} 
+                alt={shop.name}
+                className="h-10 w-10 rounded-lg object-cover"
+              />
+            )}
             <div>
               <h1 className="font-semibold text-foreground">{shop.name}</h1>
               <p className="text-sm text-muted-foreground">Agendar horário</p>
