@@ -20,17 +20,16 @@ export function DashboardLayout() {
     }
   }, [user, loading, navigate]);
 
-  // Redirect barbers to their schedule if they try to access owner-only pages
+  // Redirect barbers to their dashboard if they try to access owner-only pages
   useEffect(() => {
     if (roleLoading || !role) return;
 
-    const ownerOnlyPaths = ["/dashboard/services", "/dashboard/team", "/dashboard/clients", "/dashboard/reports", "/dashboard/settings"];
-    const barberPaths = ["/dashboard/my-schedule", "/dashboard/my-commission"];
+    const ownerOnlyPaths = ["/dashboard/services", "/dashboard/team", "/dashboard/clients", "/dashboard/reports", "/dashboard/settings", "/dashboard/schedule"];
 
     if (role === "barber") {
       // Redirect barber from owner-only pages or dashboard home
       if (ownerOnlyPaths.some(p => location.pathname.startsWith(p)) || location.pathname === "/dashboard") {
-        navigate("/dashboard/my-schedule");
+        navigate("/dashboard/my-dashboard");
       }
     }
   }, [role, roleLoading, location.pathname, navigate]);

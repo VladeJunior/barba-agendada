@@ -22,6 +22,7 @@ import Reports from "./pages/dashboard/Reports";
 import Settings from "./pages/dashboard/Settings";
 import BarberSchedule from "./pages/dashboard/BarberSchedule";
 import BarberCommission from "./pages/dashboard/BarberCommission";
+import BarberDashboardHome from "./pages/dashboard/BarberDashboardHome";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
               {/* Barber Routes */}
+              <Route path="my-dashboard" element={<BarberDashboardHome />} />
               <Route path="my-schedule" element={<BarberSchedule />} />
               <Route path="my-commission" element={<BarberCommission />} />
             </Route>
