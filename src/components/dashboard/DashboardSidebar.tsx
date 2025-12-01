@@ -24,7 +24,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
-import logo from "@/assets/infobarber-logo.jpg";
+import logo from "@/assets/infobarber-logo.png";
 
 const ownerMenuItems = [
   { title: "Início", url: "/dashboard", icon: LayoutDashboard },
