@@ -1,13 +1,15 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription, getPlanDisplayName, getStatusDisplayName, SubscriptionPlan } from "@/hooks/useSubscription";
 import { useShop } from "@/hooks/useShop";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, Crown, Users, Zap, AlertTriangle, Calendar, Sparkles } from "lucide-react";
+import { Check, Crown, Users, Zap, AlertTriangle, Calendar, Sparkles, CreditCard } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { PaymentDialog } from "@/components/dashboard/PaymentDialog";
 
 const plans: {
   id: SubscriptionPlan;
@@ -67,6 +69,10 @@ const plans: {
 ];
 
 export default function Plans() {
+  const [searchParams] = useSearchParams();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<typeof plans[0] | null>(null);
+
   const {
     plan: currentPlan,
     status,
@@ -82,6 +88,22 @@ export default function Plans() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Handle payment return from Mercado Pago
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    if (paymentStatus === "success") {
+      toast.success("Pagamento aprovado! Seu plano foi ativado.");
+      queryClient.invalidateQueries({ queryKey: ["shop"] });
+      navigate("/dashboard/plans", { replace: true });
+    } else if (paymentStatus === "failure") {
+      toast.error("Pagamento não aprovado. Tente novamente.");
+      navigate("/dashboard/plans", { replace: true });
+    } else if (paymentStatus === "pending") {
+      toast.info("Pagamento pendente. Aguarde a confirmação.");
+      navigate("/dashboard/plans", { replace: true });
+    }
+  }, [searchParams, queryClient, navigate]);
+
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
     if (!needsPlanSelection && planId === currentPlan) {
       toast.info("Você já está neste plano");
@@ -96,40 +118,47 @@ export default function Plans() {
     const selectedPlan = plans.find(p => p.id === planId);
     if (!selectedPlan) return;
 
-    try {
-      const updates: Record<string, any> = {
-        plan: planId,
-        subscription_status: selectedPlan.hasTrial ? 'trial' : 'active',
-        has_selected_plan: true,
-      };
+    // If user is in onboarding mode (first time selecting a plan)
+    if (needsPlanSelection) {
+      try {
+        const updates: Record<string, any> = {
+          plan: planId,
+          subscription_status: selectedPlan.hasTrial ? 'trial' : 'active',
+          has_selected_plan: true,
+        };
 
-      if (selectedPlan.hasTrial) {
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 7);
-        updates.trial_ends_at = trialEnd.toISOString();
+        if (selectedPlan.hasTrial) {
+          const trialEnd = new Date();
+          trialEnd.setDate(trialEnd.getDate() + 7);
+          updates.trial_ends_at = trialEnd.toISOString();
+        }
+
+        const { error } = await supabase
+          .from('shops')
+          .update(updates)
+          .eq('id', shop.id);
+
+        if (error) throw error;
+
+        await queryClient.invalidateQueries({ queryKey: ["shop"] });
+
+        toast.success(
+          selectedPlan.hasTrial 
+            ? `Plano ${selectedPlan.name} ativado! Você tem 7 dias de teste grátis.`
+            : `Plano ${selectedPlan.name} ativado com sucesso!`
+        );
+
+        navigate('/dashboard');
+      } catch (error) {
+        console.error('Error selecting plan:', error);
+        toast.error("Erro ao selecionar plano. Tente novamente.");
       }
-
-      const { error } = await supabase
-        .from('shops')
-        .update(updates)
-        .eq('id', shop.id);
-
-      if (error) throw error;
-
-      // Invalidate queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ["shop"] });
-
-      toast.success(
-        selectedPlan.hasTrial 
-          ? `Plano ${selectedPlan.name} ativado! Você tem 7 dias de teste grátis.`
-          : `Plano ${selectedPlan.name} ativado com sucesso!`
-      );
-
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Error selecting plan:', error);
-      toast.error("Erro ao selecionar plano. Tente novamente.");
+      return;
     }
+
+    // For existing users (trial expired or changing plans): show payment dialog
+    setSelectedPlanForPayment(selectedPlan);
+    setPaymentDialogOpen(true);
   };
 
   if (isLoading) {
@@ -305,14 +334,29 @@ export default function Plans() {
           </div>
 
           {isTrialExpired && (
-            <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-              <div>
-                <p className="font-medium text-destructive">Período de teste expirado</p>
-                <p className="text-sm text-muted-foreground">
-                  Escolha um plano para continuar utilizando todos os recursos.
-                </p>
+            <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                <div>
+                  <p className="font-medium text-destructive">Período de teste expirado</p>
+                  <p className="text-sm text-muted-foreground">
+                    Assine agora para continuar utilizando todos os recursos.
+                  </p>
+                </div>
               </div>
+              <Button
+                onClick={() => {
+                  const plan = plans.find(p => p.id === currentPlan);
+                  if (plan) {
+                    setSelectedPlanForPayment(plan);
+                    setPaymentDialogOpen(true);
+                  }
+                }}
+                className="bg-gold hover:bg-gold/90 text-primary-foreground"
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Pagar agora
+              </Button>
             </div>
           )}
         </CardContent>
@@ -375,23 +419,25 @@ export default function Plans() {
 
                   <Button
                     className={`w-full ${
-                      isCurrentPlan
+                      isCurrentPlan && !isTrialExpired
                         ? "bg-muted text-muted-foreground cursor-default"
                         : planItem.highlighted
                         ? "bg-gold hover:bg-gold/90 text-primary-foreground"
                         : ""
                     }`}
-                    variant={isCurrentPlan ? "secondary" : planItem.highlighted ? "default" : "outline"}
-                    disabled={isCurrentPlan}
+                    variant={isCurrentPlan && !isTrialExpired ? "secondary" : planItem.highlighted ? "default" : "outline"}
+                    disabled={isCurrentPlan && !isTrialExpired}
                     onClick={() => handleSelectPlan(planItem.id)}
                   >
-                    {isCurrentPlan
+                    {isCurrentPlan && !isTrialExpired
                       ? "Plano Atual"
+                      : isCurrentPlan && isTrialExpired
+                      ? `Assinar R$ ${planItem.price}`
                       : isUpgrade
-                      ? "Fazer Upgrade"
+                      ? `Assinar R$ ${planItem.price}`
                       : isDowngrade
-                      ? "Fazer Downgrade"
-                      : "Selecionar"}
+                      ? `Assinar R$ ${planItem.price}`
+                      : `Assinar R$ ${planItem.price}`}
                   </Button>
                 </CardContent>
               </Card>
@@ -417,6 +463,17 @@ export default function Plans() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Payment Dialog */}
+      {selectedPlanForPayment && (
+        <PaymentDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          planId={selectedPlanForPayment.id}
+          planName={selectedPlanForPayment.name}
+          planPrice={selectedPlanForPayment.price}
+        />
+      )}
     </div>
   );
 }
