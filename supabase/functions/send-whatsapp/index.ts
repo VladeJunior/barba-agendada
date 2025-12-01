@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface WhatsAppRequest {
   shopId: string;
+  shopSlug?: string;
   phone: string;
   message?: string; // Custom message for test
   clientName?: string;
@@ -27,9 +28,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const data: WhatsAppRequest = await req.json();
-    const { shopId, phone, message: customMessage, clientName, serviceName, servicePrice, barberName, dateTime, shopName } = data;
+    const { shopId, shopSlug, phone, message: customMessage, clientName, serviceName, servicePrice, barberName, dateTime, shopName } = data;
 
-    console.log("Received WhatsApp request:", { shopId, phone, clientName, hasCustomMessage: !!customMessage });
+    console.log("Received WhatsApp request:", { shopId, shopSlug, phone, clientName, hasCustomMessage: !!customMessage });
 
     if (!shopId || !phone) {
       console.log("Missing required fields, skipping WhatsApp");
@@ -92,6 +93,10 @@ const handler = async (req: Request): Promise<Response> => {
         currency: "BRL",
       }).format(servicePrice || 0);
 
+      const appointmentsUrl = shopSlug 
+        ? `${Deno.env.get("APP_URL") || "https://comb-plan.lovable.app"}/agendar/${shopSlug}/meus-agendamentos`
+        : `${Deno.env.get("APP_URL") || "https://comb-plan.lovable.app"}/meus-agendamentos`;
+
       message = `✅ *Agendamento Confirmado!*
 
 Olá, ${clientName}!
@@ -105,7 +110,7 @@ Seu agendamento na *${shopName}* foi confirmado:
 💰 *Valor:* ${formattedPrice}
 
 Para ver ou cancelar, acesse:
-${Deno.env.get("APP_URL") || "https://comb-plan.lovable.app"}/meus-agendamentos
+${appointmentsUrl}
 
 Até lá! 💈`;
     }

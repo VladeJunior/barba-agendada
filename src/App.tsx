@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Booking from "./pages/Booking";
 import BarberProfile from "./pages/BarberProfile";
 import MyAppointments from "./pages/MyAppointments";
+import MyAppointmentsByShop from "./pages/MyAppointmentsByShop";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +56,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/agendar/:shopSlug" element={<Booking />} />
             <Route path="/agendar/:shopSlug/barbeiro/:barberId" element={<BarberProfile />} />
+            <Route path="/agendar/:shopSlug/meus-agendamentos" element={<MyAppointmentsByShop />} />
             <Route path="/meus-agendamentos" element={<MyAppointments />} />
             <Route path="/aceitar-convite/:token" element={<AcceptInvite />} />
             
