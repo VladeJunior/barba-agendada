@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/infobarber-logo.png";
 
 const Login = () => {
@@ -18,9 +19,23 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate("/dashboard");
-    }
+    const checkAdminAndRedirect = async () => {
+      if (!loading && user) {
+        // Check if user is super_admin
+        const { data: isAdmin } = await supabase.rpc("has_role", {
+          _user_id: user.id,
+          _role: "super_admin",
+        });
+
+        if (isAdmin) {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
+      }
+    };
+
+    checkAdminAndRedirect();
   }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,7 +75,21 @@ const Login = () => {
         title: "Login realizado!",
         description: "Bem-vindo de volta ao InfoBarber.",
       });
-      navigate("/dashboard");
+
+      // Check if user is super_admin
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user) {
+        const { data: isAdmin } = await supabase.rpc("has_role", {
+          _user_id: session.session.user.id,
+          _role: "super_admin",
+        });
+
+        if (isAdmin) {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
+      }
     }
   };
 
