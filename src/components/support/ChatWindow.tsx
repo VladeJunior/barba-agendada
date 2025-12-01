@@ -17,7 +17,7 @@ export function ChatWindow({
   senderRole,
   currentUserId,
 }: ChatWindowProps) {
-  const { messages, loading, sendMessage } = useSupportMessages(conversationId);
+  const { messages, loading, sendMessage } = useSupportMessages(conversationId, currentUserId);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

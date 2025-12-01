@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useNotificationSound } from "./useNotificationSound";
 
 export interface SupportMessage {
   id: string;
@@ -12,10 +13,11 @@ export interface SupportMessage {
   created_at: string;
 }
 
-export function useSupportMessages(conversationId: string | null) {
+export function useSupportMessages(conversationId: string | null, currentUserId?: string) {
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { playNotificationSound } = useNotificationSound();
 
   useEffect(() => {
     if (!conversationId) {
@@ -39,7 +41,13 @@ export function useSupportMessages(conversationId: string | null) {
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            setMessages((prev) => [...prev, payload.new as SupportMessage]);
+            const newMessage = payload.new as SupportMessage;
+            setMessages((prev) => [...prev, newMessage]);
+            
+            // Play notification sound if message is from another user
+            if (currentUserId && newMessage.sender_id !== currentUserId) {
+              playNotificationSound();
+            }
           } else if (payload.eventType === "UPDATE") {
             setMessages((prev) =>
               prev.map((msg) =>
