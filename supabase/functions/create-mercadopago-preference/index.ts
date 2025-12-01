@@ -54,7 +54,7 @@ serve(async (req) => {
     const planPrices: Record<string, { name: string; price: number }> = {
       essencial: { name: "InfoBarber Essencial", price: 149 },
       profissional: { name: "InfoBarber Profissional", price: 199 },
-      elite: { name: "InfoBarber Elite", price: 299 },
+      elite: { name: "InfoBarber Elite", price: 1 }, // Teste em produção
     };
 
     const plan = planPrices[planId];

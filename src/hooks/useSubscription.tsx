@@ -41,7 +41,7 @@ const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     hasWhatsAppSupport: true,
     hasExclusiveFeatures: true,
     hasTrial: true,
-    price: 299,
+    price: 1, // Teste em produção
   },
 };
 

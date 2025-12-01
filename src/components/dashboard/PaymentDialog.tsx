@@ -26,14 +26,8 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
 
       if (error) throw error;
 
-      // Use init_point for production, sandbox_init_point for testing
-      // In production with real credentials, PIX will be available
-      const isProduction = window.location.hostname !== "localhost" && 
-                           !window.location.hostname.includes("lovable.app");
-      
-      const checkoutUrl = isProduction 
-        ? (data?.init_point || data?.sandbox_init_point)
-        : (data?.sandbox_init_point || data?.init_point);
+      // Use init_point for production (PIX available)
+      const checkoutUrl = data?.init_point || data?.sandbox_init_point;
       
       if (checkoutUrl) {
         window.location.href = checkoutUrl;

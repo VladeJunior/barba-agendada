@@ -53,7 +53,7 @@ const plans: {
     id: "elite",
     name: "Elite",
     description: "Para redes que precisam de padronização e controle",
-    price: 299,
+    price: 1, // Teste em produção
     features: [
       "Sem limite de barbeiros",
       "Agenda online",
