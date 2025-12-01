@@ -61,9 +61,31 @@ async function sendWhatsAppMessage(
   }
 }
 
+function formatTimeRemaining(minutesUntil: number): string {
+  if (minutesUntil >= 1380) { // ~23h
+    return "amanhã";
+  } else if (minutesUntil >= 90) {
+    const hours = Math.round(minutesUntil / 60);
+    return `em aproximadamente ${hours} hora${hours > 1 ? 's' : ''}`;
+  } else if (minutesUntil >= 45) {
+    return "em aproximadamente 1 hora";
+  } else if (minutesUntil >= 35) {
+    return "em aproximadamente 40 minutos";
+  } else if (minutesUntil >= 25) {
+    return "em aproximadamente 30 minutos";
+  } else if (minutesUntil >= 15) {
+    return "em aproximadamente 20 minutos";
+  } else if (minutesUntil >= 10) {
+    return "em aproximadamente 15 minutos";
+  } else {
+    return "em breve";
+  }
+}
+
 function formatReminderMessage(
   appointment: Appointment,
-  reminderType: "24h" | "1h" | "last-minute"
+  reminderType: "24h" | "1h" | "30min",
+  minutesUntilAppointment: number
 ): string {
   const date = new Date(appointment.start_time);
   const formattedDate = date.toLocaleDateString("pt-BR", {
@@ -78,29 +100,17 @@ function formatReminderMessage(
     timeZone: "America/Sao_Paulo",
   });
 
-  let timeText: string;
-  let emoji: string;
-  
-  switch (reminderType) {
-    case "24h":
-      timeText = "amanhã";
-      emoji = "⏰";
-      break;
-    case "1h":
-      timeText = "em 1 hora";
-      emoji = "⏰";
-      break;
-    case "last-minute":
-      timeText = "em breve";
-      emoji = "🚨";
-      break;
-  }
+  const timeText = formatTimeRemaining(minutesUntilAppointment);
+  const emoji = reminderType === "30min" ? "🚨" : "⏰";
+  const intro = reminderType === "30min" 
+    ? `Seu agendamento é ${timeText}:`
+    : `Passando para lembrar do seu agendamento ${timeText}:`;
 
   return `${emoji} *Lembrete de Agendamento*
 
 Olá ${appointment.client_name || "Cliente"}!
 
-${reminderType === "last-minute" ? "Seu agendamento é " : "Passando para lembrar do seu agendamento "}${timeText}:
+${intro}
 
 📅 *Data:* ${formattedDate}
 🕐 *Horário:* ${formattedTime}
@@ -114,30 +124,30 @@ Esperamos você! 😊`;
 function determineReminderType(
   minutesUntilAppointment: number,
   minutesFromCreationToAppointment: number
-): "24h" | "1h" | "last-minute" | null {
-  const hoursUntilAppointment = minutesUntilAppointment / 60;
+): "24h" | "1h" | "30min" | null {
   const hoursFromCreationToAppointment = minutesFromCreationToAppointment / 60;
 
-  // 24h reminder: 23-25h before appointment, only if created more than 24h before
-  if (hoursUntilAppointment >= 23 && hoursUntilAppointment <= 25) {
+  // 24h reminder: 23h-25h before appointment (janela de 2h)
+  // Only if created more than 24h before
+  if (minutesUntilAppointment >= 1380 && minutesUntilAppointment <= 1500) {
     if (hoursFromCreationToAppointment > 24) {
       return "24h";
     }
   }
 
-  // 1h reminder: 30min-2h before appointment (expanded from 1-2h)
-  // For appointments created more than 1h but less than 24h in advance
-  if (minutesUntilAppointment >= 30 && minutesUntilAppointment <= 120) {
+  // 1h reminder: 55-65min before appointment (janela de 10min)
+  // For appointments created 1h-24h in advance
+  if (minutesUntilAppointment >= 55 && minutesUntilAppointment <= 65) {
     if (hoursFromCreationToAppointment <= 24 && hoursFromCreationToAppointment > 1) {
       return "1h";
     }
   }
 
-  // Last-minute reminder: 5-30min before appointment
+  // 30min reminder: 25-35min before appointment (janela de 10min)
   // For appointments created less than 1h in advance
-  if (minutesUntilAppointment >= 5 && minutesUntilAppointment < 30) {
+  if (minutesUntilAppointment >= 25 && minutesUntilAppointment <= 35) {
     if (hoursFromCreationToAppointment <= 1) {
-      return "last-minute";
+      return "30min";
     }
   }
 
@@ -189,7 +199,7 @@ serve(async (req) => {
       processed: 0,
       sent24h: 0,
       sent1h: 0,
-      sentLastMinute: 0,
+      sent30min: 0,
       skipped: 0,
       errors: 0,
     };
@@ -240,7 +250,7 @@ serve(async (req) => {
       }
 
       // Send the reminder
-      const message = formatReminderMessage(appointment, reminderType);
+      const message = formatReminderMessage(appointment, reminderType, minutesUntilAppointment);
       const sent = await sendWhatsAppMessage(
         appointment.client_phone,
         message,
@@ -265,7 +275,7 @@ serve(async (req) => {
         console.log(`Sent ${reminderType} reminder for appointment ${appointment.id}`);
         if (reminderType === "24h") results.sent24h++;
         else if (reminderType === "1h") results.sent1h++;
-        else results.sentLastMinute++;
+        else results.sent30min++;
       } else {
         console.error(`Failed to send ${reminderType} reminder for ${appointment.id}`);
         results.errors++;
