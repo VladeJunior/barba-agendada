@@ -7,9 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Calendar, Clock, User, Scissors, X, ArrowLeft } from "lucide-react";
+import { Search, Calendar, Clock, User, Scissors, X, ArrowLeft, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { ReviewDialog } from "@/components/booking/ReviewDialog";
+import { useAppointmentReview } from "@/hooks/useBarberReviews";
+import { StarRating } from "@/components/ui/star-rating";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +44,11 @@ export default function MyAppointments() {
   const [phone, setPhone] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const [reviewAppointment, setReviewAppointment] = useState<{
+    id: string;
+    barberId: string;
+    barberName: string;
+  } | null>(null);
   const queryClient = useQueryClient();
 
   const formatPhone = (value: string) => {
@@ -161,65 +169,19 @@ export default function MyAppointments() {
         {appointments && appointments.length > 0 && (
           <div className="space-y-4">
             {appointments.map((appointment) => (
-              <Card key={appointment.id} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {appointment.shop?.name}
-                      </CardTitle>
-                      <CardDescription>
-                        {appointment.service?.name}
-                      </CardDescription>
-                    </div>
-                    <Badge className={statusColors[appointment.status]}>
-                      {statusLabels[appointment.status]}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {format(parseISO(appointment.start_time), "dd 'de' MMMM", {
-                          locale: ptBR,
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {format(parseISO(appointment.start_time), "HH:mm")}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span>{appointment.barber?.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Scissors className="w-4 h-4" />
-                      <span>
-                        {appointment.service?.price
-                          ? `R$ ${Number(appointment.service.price).toFixed(2)}`
-                          : "-"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {canCancel(appointment) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-destructive hover:text-destructive"
-                      onClick={() => setCancelId(appointment.id)}
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancelar agendamento
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+              <AppointmentCard
+                key={appointment.id}
+                appointment={appointment}
+                onCancel={() => setCancelId(appointment.id)}
+                onReview={(barberId, barberName) =>
+                  setReviewAppointment({
+                    id: appointment.id,
+                    barberId,
+                    barberName,
+                  })
+                }
+                canCancel={canCancel(appointment)}
+              />
             ))}
           </div>
         )}
@@ -243,7 +205,123 @@ export default function MyAppointments() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {reviewAppointment && (
+          <ReviewDialog
+            open={!!reviewAppointment}
+            onOpenChange={(open) => !open && setReviewAppointment(null)}
+            appointmentId={reviewAppointment.id}
+            barberId={reviewAppointment.barberId}
+            barberName={reviewAppointment.barberName}
+            clientPhone={searchPhone}
+          />
+        )}
       </div>
     </div>
+  );
+}
+
+function AppointmentCard({
+  appointment,
+  onCancel,
+  onReview,
+  canCancel,
+}: {
+  appointment: any;
+  onCancel: () => void;
+  onReview: (barberId: string, barberName: string) => void;
+  canCancel: boolean;
+}) {
+  const { data: existingReview } = useAppointmentReview(appointment.id);
+  const isCompleted = appointment.status === "completed";
+  const hasReview = !!existingReview;
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-lg">
+              {appointment.shop?.name}
+            </CardTitle>
+            <CardDescription>
+              {appointment.service?.name}
+            </CardDescription>
+          </div>
+          <Badge className={statusColors[appointment.status]}>
+            {statusLabels[appointment.status]}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="w-4 h-4" />
+            <span>
+              {format(parseISO(appointment.start_time), "dd 'de' MMMM", {
+                locale: ptBR,
+              })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="w-4 h-4" />
+            <span>
+              {format(parseISO(appointment.start_time), "HH:mm")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <User className="w-4 h-4" />
+            <span>{appointment.barber?.name}</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Scissors className="w-4 h-4" />
+            <span>
+              {appointment.service?.price
+                ? `R$ ${Number(appointment.service.price).toFixed(2)}`
+                : "-"}
+            </span>
+          </div>
+        </div>
+
+        {hasReview && (
+          <div className="pt-2 border-t">
+            <p className="text-sm font-medium mb-2">Sua avaliação:</p>
+            <div className="flex items-center gap-2">
+              <StarRating rating={existingReview.rating} size={16} />
+              {existingReview.comment && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {existingReview.comment}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          {canCancel && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-destructive hover:text-destructive"
+              onClick={onCancel}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancelar
+            </Button>
+          )}
+          {isCompleted && !hasReview && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => onReview(appointment.barber_id, appointment.barber?.name)}
+            >
+              <Star className="w-4 h-4 mr-2" />
+              Avaliar
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
