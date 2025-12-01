@@ -56,12 +56,15 @@ Deno.serve(async (req) => {
         .eq('client_phone', client_phone)
         .maybeSingle()
 
+      let newTotalPoints = pointsToAward
+
       if (existingPoints) {
         // Update existing record
+        newTotalPoints = existingPoints.total_points + pointsToAward
         const { error: updateError } = await supabase
           .from('loyalty_points')
           .update({
-            total_points: existingPoints.total_points + pointsToAward,
+            total_points: newTotalPoints,
             lifetime_points: existingPoints.lifetime_points + pointsToAward,
             client_name: client_name || existingPoints.client_name,
           })
@@ -89,6 +92,66 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Check if client now has enough points for any rewards
+      const { data: availableRewards } = await supabase
+        .from('loyalty_rewards')
+        .select('*')
+        .eq('shop_id', shop_id)
+        .eq('is_active', true)
+        .lte('points_required', newTotalPoints)
+        .order('points_required', { ascending: true })
+        .limit(1)
+
+      // Send WhatsApp notification if rewards are available
+      if (availableRewards && availableRewards.length > 0) {
+        const reward = availableRewards[0]
+        
+        // Get shop W-API credentials
+        const { data: shop } = await supabase
+          .from('shops')
+          .select('wapi_instance_id, wapi_token, name')
+          .eq('id', shop_id)
+          .single()
+
+        if (shop?.wapi_instance_id && shop?.wapi_token) {
+          const discount = reward.discount_percentage 
+            ? `${reward.discount_percentage}% de desconto`
+            : `R$ ${Number(reward.discount_amount).toFixed(2)} de desconto`
+
+          const message = `🎉 *Parabéns!* Você acumulou *${newTotalPoints} pontos* na ${shop.name}!\n\n` +
+            `Você já pode resgatar a recompensa:\n` +
+            `*${reward.title}* - ${discount}\n\n` +
+            `Necessário: ${reward.points_required} pontos ✨\n\n` +
+            `Entre no sistema e resgate sua recompensa! 🎁`
+
+          try {
+            const wapiResponse = await fetch(
+              `https://api.wapi.ws/v1/instance${shop.wapi_instance_id}/client/action/send-message`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${shop.wapi_token}`,
+                },
+                body: JSON.stringify({
+                  chatId: `${client_phone}@c.us`,
+                  message,
+                }),
+              }
+            )
+
+            if (!wapiResponse.ok) {
+              console.error('Failed to send WhatsApp notification:', await wapiResponse.text())
+            } else {
+              console.log(`WhatsApp notification sent to ${client_phone} about available reward`)
+            }
+          } catch (error) {
+            console.error('Error sending WhatsApp notification:', error)
+            // Don't throw - notification is optional
+          }
+        }
+      }
+
       // Create transaction record
       const { error: transactionError } = await supabase
         .from('loyalty_transactions')
@@ -105,10 +168,10 @@ Deno.serve(async (req) => {
         throw transactionError
       }
 
-      console.log(`Successfully awarded ${pointsToAward} points to ${client_phone}`)
+      console.log(`Successfully awarded ${pointsToAward} points to ${client_phone}. New total: ${newTotalPoints}`)
 
       return new Response(
-        JSON.stringify({ success: true, points_awarded: pointsToAward }),
+        JSON.stringify({ success: true, points_awarded: pointsToAward, new_total: newTotalPoints }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
