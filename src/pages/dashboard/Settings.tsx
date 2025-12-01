@@ -57,7 +57,7 @@ export default function Settings() {
     setCheckingStatus(true);
     try {
       const response = await fetch(
-        `https://api.w-api.app/v1/instance/status?instanceId=${formData.wapi_instance_id}`,
+        `https://api.w-api.app/v1/instance/status-instance?instanceId=${formData.wapi_instance_id}`,
         {
           headers: {
             Authorization: `Bearer ${formData.wapi_token}`,
