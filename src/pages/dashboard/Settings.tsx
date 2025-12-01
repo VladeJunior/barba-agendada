@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,7 @@ export default function Settings() {
   const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connected" | "loading">("loading");
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [testingWhatsApp, setTestingWhatsApp] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const bookingUrl = `${window.location.origin}/agendar/${formData.slug}`;
 
@@ -87,6 +88,35 @@ export default function Settings() {
       setConnectionStatus("disconnected");
     }
   }, [formData.wapi_instance_id, formData.wapi_token, checkInstanceStatus]);
+
+  const handleDisconnect = async () => {
+    if (!formData.wapi_instance_id || !formData.wapi_token) return;
+
+    setDisconnecting(true);
+    try {
+      const response = await fetch(
+        `https://api.w-api.app/v1/instance/disconnect?instanceId=${formData.wapi_instance_id}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${formData.wapi_token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        toast.success("WhatsApp desconectado com sucesso!");
+        setConnectionStatus("disconnected");
+      } else {
+        throw new Error("Falha ao desconectar");
+      }
+    } catch (error: any) {
+      console.error("Error disconnecting:", error);
+      toast.error("Erro ao desconectar: " + error.message);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   const fetchQrCode = async () => {
     if (!formData.wapi_instance_id || !formData.wapi_token) {
@@ -521,23 +551,43 @@ export default function Settings() {
             {isWapiConfigured && (
               <div className="bg-muted/50 border border-border rounded-lg p-4">
                 <p className="text-sm text-muted-foreground mb-3">
-                  Conecte seu WhatsApp escaneando o QR Code
+                  {connectionStatus === "connected" 
+                    ? "WhatsApp conectado! Você pode testar ou desconectar."
+                    : "Conecte seu WhatsApp escaneando o QR Code"
+                  }
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-2"
-                    onClick={fetchQrCode}
-                    disabled={loadingQr}
-                  >
-                    {loadingQr ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <QrCode className="w-4 h-4" />
-                    )}
-                    Conectar WhatsApp
-                  </Button>
+                  {connectionStatus !== "connected" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={fetchQrCode}
+                      disabled={loadingQr}
+                    >
+                      {loadingQr ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <QrCode className="w-4 h-4" />
+                      )}
+                      Conectar WhatsApp
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={handleDisconnect}
+                      disabled={disconnecting}
+                    >
+                      {disconnecting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Power className="w-4 h-4" />
+                      )}
+                      Desconectar
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
