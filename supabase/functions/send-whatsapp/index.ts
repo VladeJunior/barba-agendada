@@ -10,12 +10,13 @@ const corsHeaders = {
 interface WhatsAppRequest {
   shopId: string;
   phone: string;
-  clientName: string;
-  serviceName: string;
-  servicePrice: number;
-  barberName: string;
-  dateTime: string;
-  shopName: string;
+  message?: string; // Custom message for test
+  clientName?: string;
+  serviceName?: string;
+  servicePrice?: number;
+  barberName?: string;
+  dateTime?: string;
+  shopName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -26,9 +27,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const data: WhatsAppRequest = await req.json();
-    const { shopId, phone, clientName, serviceName, servicePrice, barberName, dateTime, shopName } = data;
+    const { shopId, phone, message: customMessage, clientName, serviceName, servicePrice, barberName, dateTime, shopName } = data;
 
-    console.log("Received WhatsApp request:", { shopId, phone, clientName });
+    console.log("Received WhatsApp request:", { shopId, phone, clientName, hasCustomMessage: !!customMessage });
 
     if (!shopId || !phone) {
       console.log("Missing required fields, skipping WhatsApp");
@@ -67,24 +68,29 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Format date/time for message
-    const appointmentDate = new Date(dateTime);
-    const formattedDate = appointmentDate.toLocaleDateString("pt-BR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
-    const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const formattedPrice = new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(servicePrice);
+    // Build WhatsApp message (use custom message or build appointment message)
+    let message: string;
+    
+    if (customMessage) {
+      message = customMessage;
+    } else {
+      // Format date/time for appointment message
+      const appointmentDate = new Date(dateTime!);
+      const formattedDate = appointmentDate.toLocaleDateString("pt-BR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      });
+      const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const formattedPrice = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(servicePrice || 0);
 
-    // Build WhatsApp message
-    const message = `✅ *Agendamento Confirmado!*
+      message = `✅ *Agendamento Confirmado!*
 
 Olá, ${clientName}!
 
@@ -100,6 +106,7 @@ Para ver ou cancelar, acesse:
 ${Deno.env.get("SUPABASE_URL")?.replace("supabase.co", "lovable.app") || "https://infobarber.lovable.app"}/meus-agendamentos
 
 Até lá! 💈`;
+    }
 
     // Format phone number (ensure it has country code)
     let formattedPhone = phone.replace(/\D/g, "");
