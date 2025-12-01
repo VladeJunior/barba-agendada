@@ -102,8 +102,11 @@ const handler = async (req: Request): Promise<Response> => {
     const cleanPhone = barber_phone.replace(/\D/g, "");
     const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
 
-    // Send WhatsApp message via W-API
-    const wapiUrl = `https://api.w-api.online/${shop.wapi_instance_id}/messages/text`;
+    console.log("Sending WhatsApp to:", formattedPhone);
+    console.log("W-API instance:", shop.wapi_instance_id);
+
+    // Send WhatsApp message via W-API using the correct API endpoint
+    const wapiUrl = `https://api.w-api.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
     
     const message = `🎉 *Convite para InfoBarber*
 
@@ -117,25 +120,35 @@ Clique no link abaixo para criar sua conta e acessar sua agenda e comissões:
 
 _Este convite expira em 7 dias._`;
 
-    const whatsappResponse = await fetch(wapiUrl, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${shop.wapi_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phone: formattedPhone,
-        message: message,
-      }),
-    });
+    console.log("Calling W-API at:", wapiUrl);
 
-    if (!whatsappResponse.ok) {
-      const errorData = await whatsappResponse.text();
-      throw new Error(`Failed to send WhatsApp: ${errorData}`);
+    try {
+      const whatsappResponse = await fetch(wapiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${shop.wapi_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: formattedPhone,
+          message: message,
+        }),
+      });
+
+      console.log("W-API response status:", whatsappResponse.status);
+      const whatsappResult = await whatsappResponse.json();
+      console.log("W-API response:", whatsappResult);
+
+      if (!whatsappResponse.ok) {
+        console.error("W-API error:", whatsappResult);
+        throw new Error(`Failed to send WhatsApp (${whatsappResponse.status}): ${JSON.stringify(whatsappResult)}`);
+      }
+
+      console.log("WhatsApp invitation sent successfully");
+    } catch (wapiError: any) {
+      console.error("W-API call failed:", wapiError);
+      throw new Error(`WhatsApp service unavailable: ${wapiError.message}`);
     }
-
-    const whatsappResult = await whatsappResponse.json();
-    console.log("WhatsApp invitation sent:", whatsappResult);
 
     return new Response(
       JSON.stringify({ success: true, invitation_id: invitation.id }),
