@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image, Gift } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,7 @@ export default function Settings() {
     slug: "",
     wapi_instance_id: "",
     wapi_token: "",
+    loyalty_points_expiration_months: 12,
   });
   const [copied, setCopied] = useState(false);
   const [slugError, setSlugError] = useState("");
@@ -212,6 +213,7 @@ export default function Settings() {
         slug: shop.slug || "",
         wapi_instance_id: (shop as any).wapi_instance_id || "",
         wapi_token: (shop as any).wapi_token || "",
+        loyalty_points_expiration_months: (shop as any).loyalty_points_expiration_months ?? 12,
       });
     }
   }, [shop]);
@@ -350,6 +352,7 @@ export default function Settings() {
           slug: formData.slug,
           wapi_instance_id: formData.wapi_instance_id || null,
           wapi_token: formData.wapi_token || null,
+          loyalty_points_expiration_months: formData.loyalty_points_expiration_months || null,
         })
         .eq("id", shop.id);
 
@@ -550,6 +553,39 @@ export default function Settings() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card variant="elevated" className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5 text-gold" />
+              Programa de Fidelidade
+            </CardTitle>
+            <CardDescription>
+              Configure a expiração de pontos do programa de fidelidade
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="loyalty-expiration">Validade dos Pontos (meses)</Label>
+              <Input
+                id="loyalty-expiration"
+                type="number"
+                min="1"
+                max="60"
+                value={formData.loyalty_points_expiration_months || ""}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  loyalty_points_expiration_months: parseInt(e.target.value) || 0
+                })}
+                placeholder="12"
+              />
+              <p className="text-xs text-muted-foreground">
+                Clientes receberão notificação 30 dias antes dos pontos expirarem. 
+                Deixe em branco para pontos sem expiração.
+              </p>
+            </div>
           </CardContent>
         </Card>
 

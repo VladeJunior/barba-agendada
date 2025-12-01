@@ -405,6 +405,7 @@ export type Database = {
           created_at: string
           id: string
           lifetime_points: number
+          points_expire_at: string | null
           shop_id: string
           total_points: number
           updated_at: string
@@ -415,6 +416,7 @@ export type Database = {
           created_at?: string
           id?: string
           lifetime_points?: number
+          points_expire_at?: string | null
           shop_id: string
           total_points?: number
           updated_at?: string
@@ -425,6 +427,7 @@ export type Database = {
           created_at?: string
           id?: string
           lifetime_points?: number
+          points_expire_at?: string | null
           shop_id?: string
           total_points?: number
           updated_at?: string
@@ -627,6 +630,7 @@ export type Database = {
           id: string
           is_active: boolean
           logo_url: string | null
+          loyalty_points_expiration_months: number | null
           name: string
           owner_id: string
           payment_customer_id: string | null
@@ -655,6 +659,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          loyalty_points_expiration_months?: number | null
           name: string
           owner_id: string
           payment_customer_id?: string | null
@@ -683,6 +688,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          loyalty_points_expiration_months?: number | null
           name?: string
           owner_id?: string
           payment_customer_id?: string | null
