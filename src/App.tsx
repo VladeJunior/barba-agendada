@@ -23,6 +23,7 @@ import Clients from "./pages/dashboard/Clients";
 import Reports from "./pages/dashboard/Reports";
 import Settings from "./pages/dashboard/Settings";
 import Plans from "./pages/dashboard/Plans";
+import Loyalty from "./pages/dashboard/Loyalty";
 import BarberSchedule from "./pages/dashboard/BarberSchedule";
 import BarberCommission from "./pages/dashboard/BarberCommission";
 import BarberDashboardHome from "./pages/dashboard/BarberDashboardHome";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="clients" element={<Clients />} />
               <Route path="reports" element={<Reports />} />
               <Route path="plans" element={<Plans />} />
+              <Route path="loyalty" element={<Loyalty />} />
               <Route path="settings" element={<Settings />} />
               {/* Barber Routes */}
               <Route path="my-dashboard" element={<BarberDashboardHome />} />

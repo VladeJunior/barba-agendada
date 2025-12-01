@@ -22,6 +22,7 @@ import {
   BarChart3,
   DollarSign,
   CreditCard,
+  Gift,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import logo from "@/assets/infobarber-logo.png";
@@ -33,6 +34,7 @@ const ownerMenuItems = [
   { title: "Equipe", url: "/dashboard/team", icon: Users },
   { title: "Clientes", url: "/dashboard/clients", icon: UserCircle },
   { title: "Relatórios", url: "/dashboard/reports", icon: BarChart3 },
+  { title: "Fidelidade", url: "/dashboard/loyalty", icon: Gift },
   { title: "Meu Plano", url: "/dashboard/plans", icon: CreditCard },
   { title: "Configurações", url: "/dashboard/settings", icon: Settings },
 ];
