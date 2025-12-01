@@ -75,8 +75,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Failed to create invitation: " + inviteError.message);
     }
 
-    // Build invitation URL
-    const appUrl = "https://pyizjlioocxfjvnosxqy.lovable.app";
+    // Build invitation URL using configured APP_URL
+    const appUrl = Deno.env.get("APP_URL") || "https://comb-plan.lovable.app";
     const inviteUrl = `${appUrl}/aceitar-convite/${invitation.token}`;
 
     // Send email using Resend API directly

@@ -105,7 +105,7 @@ Seu agendamento na *${shopName}* foi confirmado:
 💰 *Valor:* ${formattedPrice}
 
 Para ver ou cancelar, acesse:
-${Deno.env.get("SUPABASE_URL")?.replace("supabase.co", "lovable.app") || "https://infobarber.lovable.app"}/meus-agendamentos
+${Deno.env.get("APP_URL") || "https://comb-plan.lovable.app"}/meus-agendamentos
 
 Até lá! 💈`;
     }
