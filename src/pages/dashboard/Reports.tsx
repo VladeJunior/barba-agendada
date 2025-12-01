@@ -6,13 +6,28 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useDashboardMetrics, PeriodType } from "@/hooks/useDashboardMetrics";
 import { useRevenueChart } from "@/hooks/useRevenueChart";
-import { TrendingUp, TrendingDown, DollarSign, Calendar as CalendarIcon, Users, Scissors } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Calendar as CalendarIcon, Users, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  exportRevenueToExcel,
+  exportRevenueToPDF,
+  exportBarbersToExcel,
+  exportBarbersToPDF,
+  exportServicesToExcel,
+  exportServicesToPDF,
+} from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 type DateRange = {
   from: Date | undefined;
@@ -32,6 +47,79 @@ export default function Reports() {
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  const getPeriodLabel = () => {
+    switch (period) {
+      case "today":
+        return "Hoje";
+      case "week":
+        return "Esta Semana";
+      case "month":
+        return "Este Mês";
+      default:
+        return "Personalizado";
+    }
+  };
+
+  const handleExportRevenue = (format: "excel" | "pdf") => {
+    if (!chartData || !metrics) {
+      toast.error("Nenhum dado disponível para exportar");
+      return;
+    }
+
+    try {
+      if (format === "excel") {
+        exportRevenueToExcel(chartData, metrics, getPeriodLabel());
+        toast.success("Relatório exportado em Excel com sucesso!");
+      } else {
+        exportRevenueToPDF(chartData, metrics, getPeriodLabel());
+        toast.success("Relatório exportado em PDF com sucesso!");
+      }
+    } catch (error) {
+      toast.error("Erro ao exportar relatório");
+      console.error(error);
+    }
+  };
+
+  const handleExportBarbers = (format: "excel" | "pdf") => {
+    if (!metrics?.topBarbers || metrics.topBarbers.length === 0) {
+      toast.error("Nenhum dado disponível para exportar");
+      return;
+    }
+
+    try {
+      if (format === "excel") {
+        exportBarbersToExcel(metrics.topBarbers, getPeriodLabel());
+        toast.success("Relatório exportado em Excel com sucesso!");
+      } else {
+        exportBarbersToPDF(metrics.topBarbers, getPeriodLabel());
+        toast.success("Relatório exportado em PDF com sucesso!");
+      }
+    } catch (error) {
+      toast.error("Erro ao exportar relatório");
+      console.error(error);
+    }
+  };
+
+  const handleExportServices = (format: "excel" | "pdf") => {
+    if (!metrics?.topServices || metrics.topServices.length === 0) {
+      toast.error("Nenhum dado disponível para exportar");
+      return;
+    }
+
+    try {
+      if (format === "excel") {
+        exportServicesToExcel(metrics.topServices, getPeriodLabel());
+        toast.success("Relatório exportado em Excel com sucesso!");
+      } else {
+        exportServicesToPDF(metrics.topServices, getPeriodLabel());
+        toast.success("Relatório exportado em PDF com sucesso!");
+      }
+    } catch (error) {
+      toast.error("Erro ao exportar relatório");
+      console.error(error);
+    }
   };
 
   const renderTrendIcon = (growth: number) => {
@@ -139,6 +227,27 @@ export default function Reports() {
         </TabsList>
 
         <TabsContent value="revenue" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExportRevenue("excel")}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Exportar para Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportRevenue("pdf")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Exportar para PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {renderMetricCard(
               "Faturamento Total",
@@ -227,6 +336,27 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="barbers" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExportBarbers("excel")}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Exportar para Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportBarbers("pdf")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Exportar para PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Desempenho por Barbeiro</CardTitle>
@@ -273,6 +403,27 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="services" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExportServices("excel")}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Exportar para Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportServices("pdf")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Exportar para PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Serviços Mais Populares</CardTitle>
