@@ -70,10 +70,12 @@ function formatReminderMessage(
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
   const formattedTime = date.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
 
   let timeText: string;
