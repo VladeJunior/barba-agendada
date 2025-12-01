@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useShop } from "@/hooks/useShop";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,8 +40,114 @@ export default function Settings() {
   const [showToken, setShowToken] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [requestingCredentials, setRequestingCredentials] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
+  const [loadingQr, setLoadingQr] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connected" | "loading">("loading");
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   const bookingUrl = `${window.location.origin}/agendar/${formData.slug}`;
+
+  const checkInstanceStatus = useCallback(async () => {
+    if (!formData.wapi_instance_id || !formData.wapi_token) {
+      setConnectionStatus("disconnected");
+      return;
+    }
+
+    setCheckingStatus(true);
+    try {
+      const response = await fetch(
+        `https://api.w-api.app/v1/instance/status?instanceId=${formData.wapi_instance_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${formData.wapi_token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setConnectionStatus(data.connected ? "connected" : "disconnected");
+      } else {
+        setConnectionStatus("disconnected");
+      }
+    } catch (error) {
+      console.error("Error checking status:", error);
+      setConnectionStatus("disconnected");
+    } finally {
+      setCheckingStatus(false);
+    }
+  }, [formData.wapi_instance_id, formData.wapi_token]);
+
+  useEffect(() => {
+    if (formData.wapi_instance_id && formData.wapi_token) {
+      checkInstanceStatus();
+    } else {
+      setConnectionStatus("disconnected");
+    }
+  }, [formData.wapi_instance_id, formData.wapi_token, checkInstanceStatus]);
+
+  const fetchQrCode = async () => {
+    if (!formData.wapi_instance_id || !formData.wapi_token) {
+      toast.error("Configure o ID e Token da instância primeiro");
+      return;
+    }
+
+    setLoadingQr(true);
+    setQrCodeImage(null);
+    setQrDialogOpen(true);
+
+    try {
+      const response = await fetch(
+        `https://api.w-api.app/v1/instance/qr-code?instanceId=${formData.wapi_instance_id}&image=enable`,
+        {
+          headers: {
+            Authorization: `Bearer ${formData.wapi_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Falha ao buscar QR Code");
+      }
+
+      const data = await response.json();
+      
+      if (data.qrCode) {
+        setQrCodeImage(data.qrCode);
+      } else if (data.base64) {
+        setQrCodeImage(data.base64);
+      } else {
+        toast.info("WhatsApp já está conectado!");
+        setQrDialogOpen(false);
+        checkInstanceStatus();
+      }
+    } catch (error: any) {
+      console.error("Error fetching QR code:", error);
+      toast.error("Erro ao buscar QR Code: " + error.message);
+      setQrDialogOpen(false);
+    } finally {
+      setLoadingQr(false);
+    }
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (qrDialogOpen && qrCodeImage) {
+      interval = setInterval(async () => {
+        await checkInstanceStatus();
+        if (connectionStatus === "connected") {
+          toast.success("WhatsApp conectado com sucesso!");
+          setQrDialogOpen(false);
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [qrDialogOpen, qrCodeImage, connectionStatus, checkInstanceStatus]);
 
   useEffect(() => {
     if (shop) {
@@ -300,8 +406,20 @@ export default function Settings() {
               <MessageSquare className="w-5 h-5 text-gold" />
               Integração WhatsApp
               {isWapiConfigured && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-green-500/20 text-green-500 rounded-full">
-                  Configurado
+                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full flex items-center gap-1 ${
+                  connectionStatus === "connected" 
+                    ? "bg-green-500/20 text-green-500" 
+                    : connectionStatus === "loading" || checkingStatus
+                    ? "bg-yellow-500/20 text-yellow-500"
+                    : "bg-red-500/20 text-red-500"
+                }`}>
+                  {connectionStatus === "connected" ? (
+                    <><Wifi className="w-3 h-3" /> Conectado</>
+                  ) : connectionStatus === "loading" || checkingStatus ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Verificando</>
+                  ) : (
+                    <><WifiOff className="w-3 h-3" /> Desconectado</>
+                  )}
                 </span>
               )}
             </CardTitle>
@@ -342,6 +460,44 @@ export default function Settings() {
                 </Button>
               </div>
             </div>
+
+            {isWapiConfigured && (
+              <div className="bg-muted/50 border border-border rounded-lg p-4">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Conecte seu WhatsApp escaneando o QR Code
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={fetchQrCode}
+                    disabled={loadingQr}
+                  >
+                    {loadingQr ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <QrCode className="w-4 h-4" />
+                    )}
+                    Conectar WhatsApp
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={checkInstanceStatus}
+                    disabled={checkingStatus}
+                    title="Verificar conexão"
+                  >
+                    {checkingStatus ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Wifi className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="bg-muted/50 border border-border rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-3">
@@ -391,6 +547,67 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* QR Code Dialog */}
+        <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-gold" />
+                Conectar WhatsApp
+              </DialogTitle>
+              <DialogDescription>
+                Escaneie o QR Code com seu WhatsApp para conectar
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center justify-center py-6">
+              {loadingQr ? (
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="w-12 h-12 animate-spin text-gold" />
+                  <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
+                </div>
+              ) : qrCodeImage ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="bg-white p-4 rounded-lg">
+                    <img
+                      src={qrCodeImage.startsWith("data:") ? qrCodeImage : `data:image/png;base64,${qrCodeImage}`}
+                      alt="QR Code WhatsApp"
+                      className="w-64 h-64"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Abra o WhatsApp no celular → Menu (⋮) → Aparelhos conectados → Conectar um aparelho
+                  </p>
+                  <div className="flex items-center gap-2 text-sm">
+                    {checkingStatus ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Verificando conexão...</>
+                    ) : connectionStatus === "connected" ? (
+                      <span className="text-green-500 flex items-center gap-1">
+                        <Wifi className="w-4 h-4" /> Conectado!
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <WifiOff className="w-4 h-4" /> Aguardando conexão...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Erro ao carregar QR Code</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setQrDialogOpen(false)}>
+                Fechar
+              </Button>
+              {qrCodeImage && (
+                <Button onClick={fetchQrCode} disabled={loadingQr} className="bg-gold hover:bg-gold/90">
+                  Gerar Novo QR Code
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <div className="flex justify-end mt-6">
           <Button 
