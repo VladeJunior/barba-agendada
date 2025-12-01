@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_reminders: {
+        Row: {
+          appointment_id: string
+          id: string
+          reminder_type: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          id?: string
+          reminder_type: string
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          id?: string
+          reminder_type?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_reminders_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           barber_id: string
