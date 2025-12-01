@@ -2,8 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription, getPlanDisplayName, getStatusDisplayName, SubscriptionPlan } from "@/hooks/useSubscription";
-import { Check, Crown, Users, Zap, AlertTriangle, Calendar } from "lucide-react";
+import { useShop } from "@/hooks/useShop";
+import { supabase } from "@/integrations/supabase/client";
+import { Check, Crown, Users, Zap, AlertTriangle, Calendar, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 const plans: {
   id: SubscriptionPlan;
@@ -72,15 +76,60 @@ export default function Plans() {
     isTrialExpired,
     currentPeriodEndsAt,
     isLoading,
+    needsPlanSelection,
   } = useSubscription();
+  const { data: shop } = useShop();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const handleSelectPlan = (planId: SubscriptionPlan) => {
-    if (planId === currentPlan) {
+  const handleSelectPlan = async (planId: SubscriptionPlan) => {
+    if (!needsPlanSelection && planId === currentPlan) {
       toast.info("Você já está neste plano");
       return;
     }
-    // TODO: Integrate with payment provider
-    toast.info("Em breve! Integração com pagamento será disponibilizada.");
+
+    if (!shop?.id) {
+      toast.error("Erro ao identificar sua barbearia");
+      return;
+    }
+
+    const selectedPlan = plans.find(p => p.id === planId);
+    if (!selectedPlan) return;
+
+    try {
+      const updates: Record<string, any> = {
+        plan: planId,
+        subscription_status: selectedPlan.hasTrial ? 'trial' : 'active',
+        has_selected_plan: true,
+      };
+
+      if (selectedPlan.hasTrial) {
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + 7);
+        updates.trial_ends_at = trialEnd.toISOString();
+      }
+
+      const { error } = await supabase
+        .from('shops')
+        .update(updates)
+        .eq('id', shop.id);
+
+      if (error) throw error;
+
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ["shop"] });
+
+      toast.success(
+        selectedPlan.hasTrial 
+          ? `Plano ${selectedPlan.name} ativado! Você tem 7 dias de teste grátis.`
+          : `Plano ${selectedPlan.name} ativado com sucesso!`
+      );
+
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error selecting plan:', error);
+      toast.error("Erro ao selecionar plano. Tente novamente.");
+    }
   };
 
   if (isLoading) {
@@ -91,6 +140,103 @@ export default function Plans() {
     );
   }
 
+  // Onboarding mode - user hasn't selected a plan yet
+  if (needsPlanSelection) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Welcome Header */}
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-gold/20 flex items-center justify-center">
+            <Sparkles className="w-8 h-8 text-gold" />
+          </div>
+          <h1 className="text-3xl font-display font-bold text-foreground">
+            Bem-vindo ao InfoBarber!
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            Para começar a usar o sistema, escolha o plano ideal para sua barbearia.
+          </p>
+        </div>
+
+        {/* Plans Grid */}
+        <div className="grid gap-6 md:grid-cols-3">
+          {plans.map((planItem) => (
+            <Card
+              key={planItem.id}
+              className={`relative transition-all hover:scale-[1.02] ${
+                planItem.highlighted
+                  ? "border-gold shadow-lg shadow-gold/10 scale-[1.02]"
+                  : "border-border"
+              }`}
+            >
+              {planItem.highlighted && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-gold text-primary-foreground">
+                    <Zap className="w-3 h-3 mr-1" />
+                    Mais Popular
+                  </Badge>
+                </div>
+              )}
+
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="text-xl">{planItem.name}</CardTitle>
+                <CardDescription className="text-sm">{planItem.description}</CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="text-center">
+                  <span className="text-4xl font-bold text-foreground font-display">
+                    R$ {planItem.price}
+                  </span>
+                  <span className="text-muted-foreground">/mês</span>
+                </div>
+
+                <ul className="space-y-3">
+                  {planItem.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className={`w-full ${
+                    planItem.highlighted
+                      ? "bg-gold hover:bg-gold/90 text-primary-foreground"
+                      : ""
+                  }`}
+                  variant={planItem.highlighted ? "default" : "outline"}
+                  onClick={() => handleSelectPlan(planItem.id)}
+                >
+                  {planItem.hasTrial ? "Começar teste grátis" : "Começar agora"}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Info */}
+        <Card variant="elevated">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5 text-gold" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Precisa de ajuda para escolher?</h3>
+                <p className="text-sm text-muted-foreground">
+                  Entre em contato conosco pelo WhatsApp e teremos prazer em ajudar você a escolher 
+                  o melhor plano para sua barbearia.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Normal mode - user already has a plan
   return (
     <div className="space-y-8">
       {/* Header */}
