@@ -1,7 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CreditCard } from "lucide-react";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2, CreditCard, ExternalLink } from "lucide-react";
 import { SubscriptionPlan } from "@/hooks/useSubscription";
-import { TransparentCheckout } from "./TransparentCheckout";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -12,6 +15,33 @@ interface PaymentDialogProps {
 }
 
 export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice }: PaymentDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handlePayment = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-mercadopago-preference", {
+        body: { planId },
+      });
+
+      if (error) throw error;
+
+      // Use sandbox_init_point for test mode, init_point for production
+      const checkoutUrl = data?.sandbox_init_point || data?.init_point;
+      
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        throw new Error("URL de pagamento não encontrada");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Erro ao processar pagamento. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -20,15 +50,52 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
             <CreditCard className="w-5 h-5 text-gold" />
             Assinar Plano {planName}
           </DialogTitle>
+          <DialogDescription>
+            Você será redirecionado para o Mercado Pago para finalizar o pagamento de forma segura.
+          </DialogDescription>
         </DialogHeader>
 
-        <TransparentCheckout
-          planId={planId}
-          planName={planName}
-          planPrice={planPrice}
-          onSuccess={() => onOpenChange(false)}
-          onCancel={() => onOpenChange(false)}
-        />
+        <div className="space-y-6 py-4">
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Plano</span>
+              <span className="font-medium text-foreground">{planName}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Valor mensal</span>
+              <span className="font-bold text-foreground text-lg">R$ {planPrice},00</span>
+            </div>
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            <p>
+              Ao clicar em "Pagar com Mercado Pago", você será redirecionado para a página segura 
+              de pagamento do Mercado Pago onde poderá escolher entre PIX, cartão de crédito ou boleto.
+            </p>
+          </div>
+
+          <Button 
+            onClick={handlePayment} 
+            disabled={isLoading}
+            className="w-full bg-[#009EE3] hover:bg-[#007EBB] text-white"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processando...
+              </>
+            ) : (
+              <>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Pagar com Mercado Pago
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-center text-muted-foreground">
+            🔒 Pagamento processado com segurança pelo Mercado Pago
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );
