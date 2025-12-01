@@ -91,15 +91,41 @@ export default function Plans() {
   // Handle payment return from Mercado Pago
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
-    if (paymentStatus === "success") {
-      toast.success("Pagamento aprovado! Seu plano foi ativado.");
-      queryClient.invalidateQueries({ queryKey: ["shop"] });
+    
+    const checkPaymentAndUpdate = async () => {
+      try {
+        // Call edge function to verify payment status
+        const { data, error } = await supabase.functions.invoke("check-payment-status");
+        
+        if (!error && data?.updated) {
+          toast.success("Pagamento confirmado! Seu plano foi ativado.");
+          queryClient.invalidateQueries({ queryKey: ["shop"] });
+        } else if (!error && data?.status === "active") {
+          toast.success("Pagamento aprovado! Seu plano está ativo.");
+          queryClient.invalidateQueries({ queryKey: ["shop"] });
+        } else if (paymentStatus === "success") {
+          toast.success("Pagamento aprovado! Seu plano foi ativado.");
+          queryClient.invalidateQueries({ queryKey: ["shop"] });
+        }
+      } catch (e) {
+        console.error("Error checking payment:", e);
+        if (paymentStatus === "success") {
+          toast.success("Pagamento aprovado! Seu plano foi ativado.");
+          queryClient.invalidateQueries({ queryKey: ["shop"] });
+        }
+      }
+      
       navigate("/dashboard/plans", { replace: true });
+    };
+
+    if (paymentStatus === "success") {
+      checkPaymentAndUpdate();
     } else if (paymentStatus === "failure") {
       toast.error("Pagamento não aprovado. Tente novamente.");
       navigate("/dashboard/plans", { replace: true });
     } else if (paymentStatus === "pending") {
       toast.info("Pagamento pendente. Aguarde a confirmação.");
+      queryClient.invalidateQueries({ queryKey: ["shop"] });
       navigate("/dashboard/plans", { replace: true });
     }
   }, [searchParams, queryClient, navigate]);

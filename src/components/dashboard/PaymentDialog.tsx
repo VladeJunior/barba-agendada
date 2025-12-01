@@ -26,8 +26,14 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
 
       if (error) throw error;
 
-      // Use sandbox_init_point for test mode, init_point for production
-      const checkoutUrl = data?.sandbox_init_point || data?.init_point;
+      // Use init_point for production, sandbox_init_point for testing
+      // In production with real credentials, PIX will be available
+      const isProduction = window.location.hostname !== "localhost" && 
+                           !window.location.hostname.includes("lovable.app");
+      
+      const checkoutUrl = isProduction 
+        ? (data?.init_point || data?.sandbox_init_point)
+        : (data?.sandbox_init_point || data?.init_point);
       
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
@@ -68,9 +74,9 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
           </div>
 
           <div className="text-sm text-muted-foreground">
-            <p>
+          <p>
               Ao clicar em "Pagar com Mercado Pago", você será redirecionado para a página segura 
-              de pagamento do Mercado Pago onde poderá escolher entre PIX, cartão de crédito ou boleto.
+              de pagamento do Mercado Pago onde poderá escolher entre PIX ou cartão de crédito à vista.
             </p>
           </div>
 
