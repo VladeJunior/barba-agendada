@@ -103,6 +103,7 @@ export function useCreateAppointment() {
         .from("appointments")
         .insert({
           shop_id: shop.id,
+          status: 'confirmed' as const,
           ...input,
         })
         .select()

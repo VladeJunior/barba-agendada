@@ -32,61 +32,9 @@ const statusLabels = {
 
 export default function BarberSchedule() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const { barberId, shopId } = useUserRole();
-  const { user } = useAuth();
+  const { barberId } = useUserRole();
   const { data: appointments = [], isLoading } = useAppointments(selectedDate);
   const updateAppointment = useUpdateAppointment();
-  const [linking, setLinking] = useState(false);
-
-  // Auto-link barber to user if not linked yet
-  useEffect(() => {
-    const linkBarberToUser = async () => {
-      if (!user || !shopId || barberId || linking) return;
-      
-      setLinking(true);
-      try {
-        // Find barber without user_id in this shop
-        const { data: barber } = await supabase
-          .from("barbers")
-          .select("id")
-          .eq("shop_id", shopId)
-          .is("user_id", null)
-          .single();
-
-        if (barber) {
-          // Link this barber to the current user
-          const { error: updateError } = await supabase
-            .from("barbers")
-            .update({ user_id: user.id })
-            .eq("id", barber.id);
-
-          if (updateError) throw updateError;
-
-          // Create user_roles entry
-          const { error: roleError } = await supabase
-            .from("user_roles")
-            .insert({
-              user_id: user.id,
-              shop_id: shopId,
-              role: "barber",
-            });
-
-          if (roleError && !roleError.message.includes("duplicate")) {
-            throw roleError;
-          }
-
-          toast.success("Conta vinculada com sucesso!");
-          window.location.reload();
-        }
-      } catch (error: any) {
-        console.error("Erro ao vincular barbeiro:", error);
-      } finally {
-        setLinking(false);
-      }
-    };
-
-    linkBarberToUser();
-  }, [user, shopId, barberId, linking]);
 
   // Filter appointments for this barber only
   const myAppointments = appointments.filter(
