@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     question: "Como funcionam os lembretes por WhatsApp?",
-    answer: "Configuramos lembretes automáticos que são enviados 24h e 2h antes do horário agendado. Isso reduz as faltas em até 70% e seus clientes adoram a praticidade."
+    answer: "Configuramos lembretes automáticos que são enviados 24h e 1h antes do horário agendado. Isso reduz as faltas em até 70% e seus clientes adoram a praticidade."
   },
   {
     question: "Posso cancelar a qualquer momento?",
@@ -24,11 +24,11 @@ const faqs = [
   },
   {
     question: "E se eu precisar de ajuda?",
-    answer: "Nossa equipe de suporte está disponível por chat e email. Clientes do plano Professional têm suporte prioritário, e do Enterprise têm um gerente de conta dedicado."
+    answer: "Nossa equipe de suporte está disponível por chat, email e até whatsapp, de acordo com seu plano. Clientes do plano Profissional têm suporte prioritário, e do Elite têm um gerente de conta dedicado."
   },
   {
     question: "Vocês oferecem período de teste?",
-    answer: "Melhor que isso! O plano Starter é gratuito para sempre. Você pode experimentar todas as funcionalidades básicas sem pagar nada e fazer upgrade quando quiser."
+    answer: "Melhor que isso! Os planos Profissional e Elite possuem acesso gratuito de 7 dias. Você pode experimentar todas as funcionalidades básicas sem pagar nada nesse periodo e fazer upgrade quando terminar o prazo."
   }
 ];
 
