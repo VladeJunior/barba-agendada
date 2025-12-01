@@ -29,7 +29,6 @@ async function sendWhatsAppMessage(
   token: string
 ): Promise<boolean> {
   try {
-    // Format phone number (Brazil)
     let formattedPhone = phone.replace(/\D/g, "");
     if (!formattedPhone.startsWith("55")) {
       formattedPhone = "55" + formattedPhone;
@@ -62,7 +61,10 @@ async function sendWhatsAppMessage(
   }
 }
 
-function formatReminderMessage(appointment: Appointment, reminderType: "24h" | "1h"): string {
+function formatReminderMessage(
+  appointment: Appointment,
+  reminderType: "24h" | "1h" | "last-minute"
+): string {
   const date = new Date(appointment.start_time);
   const formattedDate = date.toLocaleDateString("pt-BR", {
     weekday: "long",
@@ -74,13 +76,29 @@ function formatReminderMessage(appointment: Appointment, reminderType: "24h" | "
     minute: "2-digit",
   });
 
-  const timeText = reminderType === "24h" ? "amanhã" : "em 1 hora";
+  let timeText: string;
+  let emoji: string;
+  
+  switch (reminderType) {
+    case "24h":
+      timeText = "amanhã";
+      emoji = "⏰";
+      break;
+    case "1h":
+      timeText = "em 1 hora";
+      emoji = "⏰";
+      break;
+    case "last-minute":
+      timeText = "em breve";
+      emoji = "🚨";
+      break;
+  }
 
-  return `⏰ *Lembrete de Agendamento*
+  return `${emoji} *Lembrete de Agendamento*
 
 Olá ${appointment.client_name || "Cliente"}!
 
-Passando para lembrar do seu agendamento ${timeText}:
+${reminderType === "last-minute" ? "Seu agendamento é " : "Passando para lembrar do seu agendamento "}${timeText}:
 
 📅 *Data:* ${formattedDate}
 🕐 *Horário:* ${formattedTime}
@@ -89,6 +107,39 @@ Passando para lembrar do seu agendamento ${timeText}:
 🏪 *Local:* ${appointment.shop?.name || "Barbearia"}
 
 Esperamos você! 😊`;
+}
+
+function determineReminderType(
+  minutesUntilAppointment: number,
+  minutesFromCreationToAppointment: number
+): "24h" | "1h" | "last-minute" | null {
+  const hoursUntilAppointment = minutesUntilAppointment / 60;
+  const hoursFromCreationToAppointment = minutesFromCreationToAppointment / 60;
+
+  // 24h reminder: 23-25h before appointment, only if created more than 24h before
+  if (hoursUntilAppointment >= 23 && hoursUntilAppointment <= 25) {
+    if (hoursFromCreationToAppointment > 24) {
+      return "24h";
+    }
+  }
+
+  // 1h reminder: 30min-2h before appointment (expanded from 1-2h)
+  // For appointments created more than 1h but less than 24h in advance
+  if (minutesUntilAppointment >= 30 && minutesUntilAppointment <= 120) {
+    if (hoursFromCreationToAppointment <= 24 && hoursFromCreationToAppointment > 1) {
+      return "1h";
+    }
+  }
+
+  // Last-minute reminder: 5-30min before appointment
+  // For appointments created less than 1h in advance
+  if (minutesUntilAppointment >= 5 && minutesUntilAppointment < 30) {
+    if (hoursFromCreationToAppointment <= 1) {
+      return "last-minute";
+    }
+  }
+
+  return null;
 }
 
 serve(async (req) => {
@@ -102,14 +153,11 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
-    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const in1h = new Date(now.getTime() + 60 * 60 * 1000);
     const in25h = new Date(now.getTime() + 25 * 60 * 60 * 1000);
-    const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
     console.log(`Checking for reminders at ${now.toISOString()}`);
 
-    // Fetch appointments that need reminders
+    // Fetch appointments that need reminders (from 5 min to 25h ahead)
     const { data: appointments, error: appointmentsError } = await supabase
       .from("appointments")
       .select(`
@@ -139,6 +187,7 @@ serve(async (req) => {
       processed: 0,
       sent24h: 0,
       sent1h: 0,
+      sentLastMinute: 0,
       skipped: 0,
       errors: 0,
     };
@@ -162,29 +211,14 @@ serve(async (req) => {
 
       const appointmentTime = new Date(appointment.start_time);
       const createdAt = new Date(appointment.created_at);
-      const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-      const hoursFromCreationToAppointment = (appointmentTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      const minutesUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60);
+      const minutesFromCreationToAppointment = (appointmentTime.getTime() - createdAt.getTime()) / (1000 * 60);
 
       // Determine which reminder to send
-      let reminderType: "24h" | "1h" | null = null;
-
-      // Check for 24h reminder (between 23-25h before appointment)
-      if (hoursUntilAppointment >= 23 && hoursUntilAppointment <= 25) {
-        // Only send 24h reminder if appointment was created more than 24h before
-        if (hoursFromCreationToAppointment > 24) {
-          reminderType = "24h";
-        }
-      }
-
-      // Check for 1h reminder (between 1-2h before appointment)
-      if (hoursUntilAppointment >= 1 && hoursUntilAppointment <= 2) {
-        // Send 1h reminder if:
-        // 1. Appointment was created less than 24h before (no 24h reminder was possible)
-        // 2. OR it's just an additional 1h reminder for all appointments
-        if (hoursFromCreationToAppointment <= 24) {
-          reminderType = "1h";
-        }
-      }
+      const reminderType = determineReminderType(
+        minutesUntilAppointment,
+        minutesFromCreationToAppointment
+      );
 
       if (!reminderType) {
         continue;
@@ -228,7 +262,8 @@ serve(async (req) => {
       if (sent) {
         console.log(`Sent ${reminderType} reminder for appointment ${appointment.id}`);
         if (reminderType === "24h") results.sent24h++;
-        else results.sent1h++;
+        else if (reminderType === "1h") results.sent1h++;
+        else results.sentLastMinute++;
       } else {
         console.error(`Failed to send ${reminderType} reminder for ${appointment.id}`);
         results.errors++;
