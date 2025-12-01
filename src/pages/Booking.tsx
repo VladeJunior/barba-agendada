@@ -99,6 +99,24 @@ export default function Booking() {
 
       if (error) throw error;
 
+      // Send WhatsApp confirmation (silently - don't block on errors)
+      try {
+        await supabase.functions.invoke("send-whatsapp", {
+          body: {
+            shopId: shop.id,
+            phone: clientPhone.replace(/\D/g, ""),
+            clientName: clientName.trim(),
+            serviceName: selectedService.name,
+            servicePrice: selectedService.price,
+            barberName: selectedBarber?.name || "",
+            dateTime: selectedDateTime.toISOString(),
+            shopName: shop.name,
+          },
+        });
+      } catch (whatsappError) {
+        console.log("WhatsApp notification skipped:", whatsappError);
+      }
+
       setIsConfirmed(true);
       toast.success("Agendamento confirmado com sucesso!");
     } catch (error: any) {
