@@ -108,19 +108,38 @@ export default function Settings() {
       );
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("QR Code error response:", errorText);
         throw new Error("Falha ao buscar QR Code");
       }
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
       
-      if (data.qrCode) {
-        setQrCodeImage(data.qrCode);
-      } else if (data.base64) {
-        setQrCodeImage(data.base64);
+      if (contentType?.includes("image/")) {
+        // Response is a direct image (PNG)
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setQrCodeImage(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
       } else {
-        toast.info("WhatsApp já está conectado!");
-        setQrDialogOpen(false);
-        checkInstanceStatus();
+        // Response is JSON
+        const data = await response.json();
+        
+        if (data.qrCode) {
+          setQrCodeImage(data.qrCode);
+        } else if (data.base64) {
+          setQrCodeImage(`data:image/png;base64,${data.base64}`);
+        } else if (data.connected) {
+          toast.info("WhatsApp já está conectado!");
+          setQrDialogOpen(false);
+          checkInstanceStatus();
+        } else {
+          toast.info("WhatsApp já está conectado!");
+          setQrDialogOpen(false);
+          checkInstanceStatus();
+        }
       }
     } catch (error: any) {
       console.error("Error fetching QR code:", error);
@@ -570,7 +589,7 @@ export default function Settings() {
                 <div className="flex flex-col items-center gap-4">
                   <div className="bg-white p-4 rounded-lg">
                     <img
-                      src={qrCodeImage.startsWith("data:") ? qrCodeImage : `data:image/png;base64,${qrCodeImage}`}
+                      src={qrCodeImage}
                       alt="QR Code WhatsApp"
                       className="w-64 h-64"
                     />
