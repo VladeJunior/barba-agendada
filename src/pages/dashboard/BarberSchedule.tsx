@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useAppointments";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -10,6 +12,7 @@ import { format, addDays, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const statusColors = {
   scheduled: "bg-blue-500/20 text-blue-400",
@@ -29,9 +32,61 @@ const statusLabels = {
 
 export default function BarberSchedule() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const { barberId } = useUserRole();
+  const { barberId, shopId } = useUserRole();
+  const { user } = useAuth();
   const { data: appointments = [], isLoading } = useAppointments(selectedDate);
   const updateAppointment = useUpdateAppointment();
+  const [linking, setLinking] = useState(false);
+
+  // Auto-link barber to user if not linked yet
+  useEffect(() => {
+    const linkBarberToUser = async () => {
+      if (!user || !shopId || barberId || linking) return;
+      
+      setLinking(true);
+      try {
+        // Find barber without user_id in this shop
+        const { data: barber } = await supabase
+          .from("barbers")
+          .select("id")
+          .eq("shop_id", shopId)
+          .is("user_id", null)
+          .single();
+
+        if (barber) {
+          // Link this barber to the current user
+          const { error: updateError } = await supabase
+            .from("barbers")
+            .update({ user_id: user.id })
+            .eq("id", barber.id);
+
+          if (updateError) throw updateError;
+
+          // Create user_roles entry
+          const { error: roleError } = await supabase
+            .from("user_roles")
+            .insert({
+              user_id: user.id,
+              shop_id: shopId,
+              role: "barber",
+            });
+
+          if (roleError && !roleError.message.includes("duplicate")) {
+            throw roleError;
+          }
+
+          toast.success("Conta vinculada com sucesso!");
+          window.location.reload();
+        }
+      } catch (error: any) {
+        console.error("Erro ao vincular barbeiro:", error);
+      } finally {
+        setLinking(false);
+      }
+    };
+
+    linkBarberToUser();
+  }, [user, shopId, barberId, linking]);
 
   // Filter appointments for this barber only
   const myAppointments = appointments.filter(
