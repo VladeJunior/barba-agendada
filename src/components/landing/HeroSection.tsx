@@ -1,9 +1,21 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, Users, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-barbershop.jpg";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArcadeEmbed } from "./ArcadeEmbed";
 export function HeroSection() {
-  return <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+  const [demoOpen, setDemoOpen] = useState(false);
+
+  return (
+    <>
+    <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <img src={heroImage} alt="Interior de barbearia premium" className="w-full h-full object-cover" />
@@ -47,8 +59,8 @@ export function HeroSection() {
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
             </Button>
-            <Button variant="outline-gold" size="xl" asChild>
-              <Link to="/demo">Ver Demonstração</Link>
+            <Button variant="outline-gold" size="xl" onClick={() => setDemoOpen(true)}>
+              Ver Demonstração
             </Button>
           </div>
 
@@ -83,5 +95,16 @@ export function HeroSection() {
 
       {/* Decorative Elements */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-10" />
-    </section>;
+    </section>
+
+    <Dialog open={demoOpen} onOpenChange={setDemoOpen}>
+      <DialogContent className="max-w-5xl w-[95vw]">
+        <DialogHeader>
+          <DialogTitle>Demonstração do InfoBarber</DialogTitle>
+        </DialogHeader>
+        <ArcadeEmbed />
+      </DialogContent>
+    </Dialog>
+    </>
+  );
 }
