@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useShop } from "./useShop";
 import { toast } from "sonner";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
+import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 const TIMEZONE = "America/Sao_Paulo";
+const SAO_PAULO_OFFSET = "-03:00"; // Brazil doesn't observe DST since 2019
 
 export interface Appointment {
   id: string;
@@ -54,9 +55,11 @@ export function useAppointments(date?: Date) {
         .order("start_time");
 
       if (date) {
-        const zonedDate = toZonedTime(date, TIMEZONE);
-        const start = fromZonedTime(startOfDay(zonedDate), TIMEZONE).toISOString();
-        const end = fromZonedTime(endOfDay(zonedDate), TIMEZONE).toISOString();
+        // Get date string in São Paulo timezone
+        const dateStr = formatInTimeZone(date, TIMEZONE, 'yyyy-MM-dd');
+        // Create UTC boundaries with explicit São Paulo offset
+        const start = new Date(`${dateStr}T00:00:00${SAO_PAULO_OFFSET}`).toISOString();
+        const end = new Date(`${dateStr}T23:59:59.999${SAO_PAULO_OFFSET}`).toISOString();
         query = query.gte("start_time", start).lte("start_time", end);
       }
 
@@ -77,16 +80,22 @@ export function useWeekAppointments(date: Date) {
     queryFn: async () => {
       if (!shop) return [];
 
-      const zonedDate = toZonedTime(date, TIMEZONE);
-      const start = fromZonedTime(startOfWeek(zonedDate, { weekStartsOn: 0 }), TIMEZONE).toISOString();
-      const end = fromZonedTime(endOfWeek(zonedDate, { weekStartsOn: 0 }), TIMEZONE).toISOString();
+      // Get week boundaries in São Paulo timezone
+      const dateStr = formatInTimeZone(date, TIMEZONE, 'yyyy-MM-dd');
+      const dateInSaoPaulo = new Date(`${dateStr}T12:00:00${SAO_PAULO_OFFSET}`);
+      const weekStart = startOfWeek(dateInSaoPaulo, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(dateInSaoPaulo, { weekStartsOn: 0 });
+      const start = formatInTimeZone(weekStart, TIMEZONE, "yyyy-MM-dd'T'00:00:00") + SAO_PAULO_OFFSET;
+      const end = formatInTimeZone(weekEnd, TIMEZONE, "yyyy-MM-dd'T'23:59:59.999") + SAO_PAULO_OFFSET;
+      const startISO = new Date(start).toISOString();
+      const endISO = new Date(end).toISOString();
 
       const { data, error } = await supabase
         .from("appointments")
         .select("*, barber:barbers(name), service:services(name, price, duration_minutes)")
         .eq("shop_id", shop.id)
-        .gte("start_time", start)
-        .lte("start_time", end)
+        .gte("start_time", startISO)
+        .lte("start_time", endISO)
         .order("start_time");
 
       if (error) throw error;
