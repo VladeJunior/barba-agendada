@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useShop } from "./useShop";
 import { toast } from "sonner";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
+
+const TIMEZONE = "America/Sao_Paulo";
 
 export interface Appointment {
   id: string;
@@ -51,8 +54,9 @@ export function useAppointments(date?: Date) {
         .order("start_time");
 
       if (date) {
-        const start = startOfDay(date).toISOString();
-        const end = endOfDay(date).toISOString();
+        const zonedDate = toZonedTime(date, TIMEZONE);
+        const start = fromZonedTime(startOfDay(zonedDate), TIMEZONE).toISOString();
+        const end = fromZonedTime(endOfDay(zonedDate), TIMEZONE).toISOString();
         query = query.gte("start_time", start).lte("start_time", end);
       }
 
@@ -73,8 +77,9 @@ export function useWeekAppointments(date: Date) {
     queryFn: async () => {
       if (!shop) return [];
 
-      const start = startOfWeek(date, { weekStartsOn: 0 }).toISOString();
-      const end = endOfWeek(date, { weekStartsOn: 0 }).toISOString();
+      const zonedDate = toZonedTime(date, TIMEZONE);
+      const start = fromZonedTime(startOfWeek(zonedDate, { weekStartsOn: 0 }), TIMEZONE).toISOString();
+      const end = fromZonedTime(endOfWeek(zonedDate, { weekStartsOn: 0 }), TIMEZONE).toISOString();
 
       const { data, error } = await supabase
         .from("appointments")
