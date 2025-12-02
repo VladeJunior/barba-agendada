@@ -6,9 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar, Users, DollarSign, TrendingUp, TrendingDown, Clock, BarChart3, PieChart, Award } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { toZonedTime } from "date-fns-tz";
-
-const TIMEZONE = "America/Sao_Paulo";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from "recharts";
@@ -26,12 +23,9 @@ export default function DashboardHome() {
   const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics(period);
   const navigate = useNavigate();
 
-  const now = toZonedTime(new Date(), TIMEZONE);
+  const now = new Date();
   const upcomingAppointments = todayAppointments
-    .filter(a => {
-      const endTime = toZonedTime(new Date(a.end_time), TIMEZONE);
-      return a.status !== "cancelled" && a.status !== "no_show" && a.status !== "completed" && endTime > now;
-    })
+    .filter(a => a.status !== "cancelled" && a.status !== "no_show" && a.status !== "completed" && new Date(a.end_time) > now)
     .slice(0, 5);
 
   if (shopLoading) {
