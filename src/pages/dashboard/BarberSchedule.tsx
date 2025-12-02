@@ -10,9 +10,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { format, addDays, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { toZonedTime } from "date-fns-tz";
-
-const TIMEZONE = "America/Sao_Paulo";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -34,7 +31,7 @@ const statusLabels = {
 };
 
 export default function BarberSchedule() {
-  const [selectedDate, setSelectedDate] = useState<Date>(() => toZonedTime(new Date(), TIMEZONE));
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { barberId } = useUserRole();
   const { data: appointments = [], isLoading } = useAppointments(selectedDate);
   const updateAppointment = useUpdateAppointment();
