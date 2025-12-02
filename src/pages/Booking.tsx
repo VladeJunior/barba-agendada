@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, ExternalLink } from "lucide-react";
+import { CheckCircle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { usePublicShopBySlug, usePublicServices, usePublicBarbers } from "@/hooks/usePublicShop";
@@ -11,6 +11,7 @@ import { BarberSelector } from "@/components/booking/BarberSelector";
 import { DateTimePicker } from "@/components/booking/DateTimePicker";
 import { BookingConfirmation } from "@/components/booking/BookingConfirmation";
 import { BookingStepper } from "@/components/booking/BookingStepper";
+import { ShopCoverHeader } from "@/components/booking/ShopCoverHeader";
 import { toast } from "sonner";
 
 const STEPS = [
@@ -224,28 +225,13 @@ export default function Booking() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            {currentStep > 1 && (
-              <Button variant="ghost" size="icon" onClick={handleBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
-            {shop.logo_url && (
-              <img 
-                src={shop.logo_url} 
-                alt={shop.name}
-                className="h-10 w-10 rounded-lg object-cover"
-              />
-            )}
-            <div>
-              <h1 className="font-semibold text-foreground">{shop.name}</h1>
-              <p className="text-sm text-muted-foreground">Agendar horário</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      <ShopCoverHeader
+        shop={shop}
+        shopSlug={shopSlug}
+        subtitle="Agendar horário"
+        showBackButton={currentStep > 1}
+        onBack={handleBack}
+      />
 
       <main className="container mx-auto px-4 py-6 max-w-2xl">
         <div className="mb-8">

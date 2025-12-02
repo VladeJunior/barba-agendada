@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock, User, Scissors, Phone, AlertCircle, X, Home, ChevronRight } from "lucide-react";
+import { Calendar, Clock, User, Scissors, Phone, AlertCircle, X, Home, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ShopCoverHeader } from "@/components/booking/ShopCoverHeader";
 
 const statusLabels = {
   scheduled: "Agendado",
@@ -93,42 +94,30 @@ export default function MyAppointmentsByShop() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            {shop && shopSlug && (
-              <Link to={`/agendar/${shopSlug}`}>
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-            )}
-            {shop?.logo_url && (
-              <img 
-                src={shop.logo_url} 
-                alt={shop.name}
-                className="h-10 w-10 rounded-lg object-cover"
-              />
-            )}
-            <div className="flex-1">
-              <h1 className="font-semibold text-foreground">Meus Agendamentos</h1>
-              {shop && <p className="text-sm text-muted-foreground">{shop.name}</p>}
-            </div>
+      {shop && (
+        <ShopCoverHeader
+          shop={shop}
+          shopSlug={shopSlug}
+          title="Meus Agendamentos"
+          subtitle={shop.name}
+          showBackButton
+          backTo={`/agendar/${shopSlug}`}
+        />
+      )}
+
+      {/* Breadcrumb */}
+      {shop && shopSlug && (
+        <div className="container mx-auto px-4 py-3 border-b">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Link to={`/agendar/${shopSlug}`} className="hover:text-foreground transition-colors flex items-center gap-1">
+              <Home className="h-4 w-4" />
+              Agendar
+            </Link>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-foreground">Meus Agendamentos</span>
           </div>
-          
-          {/* Breadcrumb */}
-          {shop && shopSlug && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
-              <Link to={`/agendar/${shopSlug}`} className="hover:text-foreground transition-colors flex items-center gap-1">
-                <Home className="h-4 w-4" />
-                Agendar
-              </Link>
-              <ChevronRight className="h-4 w-4" />
-              <span className="text-foreground">Meus Agendamentos</span>
-            </div>
-          )}
         </div>
-      </header>
+      )}
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
