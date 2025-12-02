@@ -121,12 +121,6 @@ function formatAgendaMessage(
       message += `\n`;
     });
 
-    // Calculate total revenue for the day
-    const totalRevenue = appointments.reduce((sum, apt) => {
-      return sum + (apt.services?.price || 0);
-    }, 0);
-
-    message += `💰 *Faturamento previsto:* R$ ${totalRevenue.toFixed(2).replace(".", ",")}\n\n`;
     message += `Tenha um ótimo dia de trabalho! 💈✨`;
   }
 
