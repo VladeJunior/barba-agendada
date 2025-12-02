@@ -24,7 +24,7 @@ export default function DashboardHome() {
   const navigate = useNavigate();
 
   const upcomingAppointments = todayAppointments
-    .filter(a => a.status !== "cancelled" && a.status !== "no_show" && new Date(a.start_time) > new Date())
+    .filter(a => a.status !== "cancelled" && a.status !== "no_show" && a.status !== "completed" && new Date(a.end_time) > new Date())
     .slice(0, 5);
 
   if (shopLoading) {
