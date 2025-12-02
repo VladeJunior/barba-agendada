@@ -105,7 +105,7 @@ export default function Booking() {
           notes: notes.trim() || null,
           start_time: selectedDateTime.toISOString(),
           end_time: endTime.toISOString(),
-          status: "scheduled",
+          status: "confirmed",
           payment_status: "pending",
         });
 
