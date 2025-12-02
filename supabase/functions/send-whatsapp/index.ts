@@ -15,6 +15,8 @@ interface WhatsAppRequest {
   clientName?: string;
   serviceName?: string;
   servicePrice?: number;
+  originalPrice?: number;
+  discountAmount?: number;
   barberName?: string;
   dateTime?: string;
   shopName?: string;
@@ -28,9 +30,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const data: WhatsAppRequest = await req.json();
-    const { shopId, shopSlug, phone, message: customMessage, clientName, serviceName, servicePrice, barberName, dateTime, shopName } = data;
+    const { shopId, shopSlug, phone, message: customMessage, clientName, serviceName, servicePrice, originalPrice, discountAmount, barberName, dateTime, shopName } = data;
 
-    console.log("Received WhatsApp request:", { shopId, shopSlug, phone, clientName, hasCustomMessage: !!customMessage });
+    console.log("Received WhatsApp request:", { shopId, shopSlug, phone, clientName, hasCustomMessage: !!customMessage, hasDiscount: !!discountAmount });
 
     if (!shopId || !phone) {
       console.log("Missing required fields, skipping WhatsApp");
@@ -93,6 +95,20 @@ const handler = async (req: Request): Promise<Response> => {
         currency: "BRL",
       }).format(servicePrice || 0);
 
+      // Format discount info if applicable
+      let priceInfo = `💰 *Valor:* ${formattedPrice}`;
+      if (discountAmount && discountAmount > 0 && originalPrice) {
+        const formattedOriginalPrice = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(originalPrice);
+        const formattedDiscount = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(discountAmount);
+        priceInfo = `💰 *Valor:* ~${formattedOriginalPrice}~ ${formattedPrice} _(desconto: ${formattedDiscount})_`;
+      }
+
       const appUrl = Deno.env.get("APP_URL") || "https://comb-plan.lovable.app";
       const appointmentsUrl = shopSlug 
         ? `${appUrl}/agendar/${shopSlug}/meus-agendamentos`
@@ -108,7 +124,7 @@ Seu agendamento na *${shopName}* foi confirmado:
 🕐 *Horário:* ${formattedTime}
 💈 *Serviço:* ${serviceName}
 👤 *Profissional:* ${barberName}
-💰 *Valor:* ${formattedPrice}
+${priceInfo}
 
 Para ver ou cancelar, acesse:
 ${appointmentsUrl}

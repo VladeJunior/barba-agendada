@@ -82,17 +82,28 @@ export default function Booking() {
     try {
       const endTime = new Date(selectedDateTime.getTime() + selectedService.duration_minutes * 60000);
 
-      // If coupon was applied, increment usage count
+      // Calculate discount and final price
+      const originalPrice = selectedService.price;
+      let discountAmount = 0;
+      
       if (appliedCoupon) {
-        const { error: couponError } = await supabase
-          .from("loyalty_coupons")
-          .update({ current_uses: appliedCoupon.current_uses + 1 })
-          .eq("id", appliedCoupon.id);
+        if (appliedCoupon.discount_percentage) {
+          discountAmount = originalPrice * (appliedCoupon.discount_percentage / 100);
+        } else if (appliedCoupon.discount_amount) {
+          discountAmount = Math.min(appliedCoupon.discount_amount, originalPrice);
+        }
+        
+        // Increment coupon usage via secure RPC function (bypasses RLS)
+        const { error: couponError } = await supabase.rpc('increment_coupon_usage', { 
+          coupon_uuid: appliedCoupon.id 
+        });
 
         if (couponError) {
           console.error("Error updating coupon usage:", couponError);
         }
       }
+      
+      const finalPrice = Math.max(0, originalPrice - discountAmount);
 
       const { error } = await supabase
         .from("appointments")
@@ -107,6 +118,10 @@ export default function Booking() {
           end_time: endTime.toISOString(),
           status: "confirmed",
           payment_status: "pending",
+          coupon_id: appliedCoupon?.id || null,
+          original_price: originalPrice,
+          discount_amount: discountAmount,
+          final_price: finalPrice,
         });
 
       if (error) throw error;
@@ -120,7 +135,9 @@ export default function Booking() {
             phone: clientPhone.replace(/\D/g, ""),
             clientName: clientName.trim(),
             serviceName: selectedService.name,
-            servicePrice: selectedService.price,
+            servicePrice: finalPrice,
+            originalPrice: discountAmount > 0 ? originalPrice : undefined,
+            discountAmount: discountAmount > 0 ? discountAmount : undefined,
             barberName: selectedBarber?.name || "",
             dateTime: selectedDateTime.toISOString(),
             shopName: shop.name,
