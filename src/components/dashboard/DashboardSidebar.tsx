@@ -48,12 +48,18 @@ const barberMenuItems = [
 ];
 
 export function DashboardSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { role } = useUserRole();
 
   const menuItems = role === "barber" ? barberMenuItems : ownerMenuItems;
+
+  const handleMenuClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   const isActive = (path: string) => {
     if (path === "/dashboard") {
@@ -88,6 +94,7 @@ export function DashboardSidebar() {
                       end={item.url === "/dashboard" || item.url === "/dashboard/my-schedule"}
                       className="hover:bg-muted/50"
                       activeClassName="bg-gold/10 text-gold"
+                      onClick={handleMenuClick}
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
