@@ -15,6 +15,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, CalendarIcon, Clock, ChevronLeft, ChevronRight, X, Check } from "lucide-react";
 import { format, addMinutes, addDays, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toZonedTime } from "date-fns-tz";
+
+const TIMEZONE = "America/Sao_Paulo";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -35,7 +38,7 @@ const statusLabels = {
 };
 
 export default function Schedule() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => toZonedTime(new Date(), TIMEZONE));
   const { data: appointments = [], isLoading } = useAppointments(selectedDate);
   const { data: barbers = [] } = useBarbers();
   const { data: services = [] } = useServices();
