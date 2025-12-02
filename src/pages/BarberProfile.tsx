@@ -5,15 +5,16 @@ import { useBarberReviews } from "@/hooks/useBarberReviews";
 import { useBarberStats } from "@/hooks/useBarberStats";
 import { useBarberPortfolio } from "@/hooks/useBarberPortfolio";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StarRating } from "@/components/ui/star-rating";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, User, TrendingUp, Calendar, Star, Image as ImageIcon } from "lucide-react";
+import { User, TrendingUp, Calendar, Star, Image as ImageIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ShopCoverHeader } from "@/components/booking/ShopCoverHeader";
 
 export default function BarberProfile() {
   const { shopSlug, barberId } = useParams();
@@ -47,14 +48,18 @@ export default function BarberProfile() {
 
   return (
     <div className="min-h-screen bg-background">
+      {shop && (
+        <ShopCoverHeader
+          shop={shop}
+          shopSlug={shopSlug}
+          title={barber.name}
+          subtitle={shop.name}
+          showBackButton
+          backTo={`/agendar/${shopSlug}`}
+        />
+      )}
+
       <div className="container max-w-6xl mx-auto py-8 px-4">
-        <Link 
-          to={`/agendar/${shopSlug}`}
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para agendamento
-        </Link>
 
         {/* Header Section */}
         <Card className="mb-6">
