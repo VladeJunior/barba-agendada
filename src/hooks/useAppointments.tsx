@@ -23,6 +23,10 @@ export interface Appointment {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  coupon_id: string | null;
+  discount_amount: number | null;
+  original_price: number | null;
+  final_price: number | null;
   barber?: { name: string };
   service?: { name: string; price: number; duration_minutes: number };
 }
