@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useShop } from "@/hooks/useShop";
-import { useAppointments } from "@/hooks/useAppointments";
 import { useDashboardMetrics, PeriodType } from "@/hooks/useDashboardMetrics";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, DollarSign, TrendingUp, TrendingDown, Clock, BarChart3, PieChart, Award } from "lucide-react";
+import { Calendar, Users, DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, Award } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from "recharts";
 
 const PERIOD_LABELS: Record<PeriodType, string> = {
@@ -19,14 +17,7 @@ const PERIOD_LABELS: Record<PeriodType, string> = {
 export default function DashboardHome() {
   const [period, setPeriod] = useState<PeriodType>("week");
   const { data: shop, isLoading: shopLoading } = useShop();
-  const { data: todayAppointments = [] } = useAppointments(new Date());
   const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics(period);
-  const navigate = useNavigate();
-
-  const now = new Date();
-  const upcomingAppointments = todayAppointments
-    .filter(a => a.status !== "cancelled" && a.status !== "no_show" && a.status !== "completed" && new Date(a.end_time) > now)
-    .slice(0, 5);
 
   if (shopLoading) {
     return (
@@ -204,93 +195,41 @@ export default function DashboardHome() {
         </Card>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Top Services */}
-        <Card variant="elevated">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart3 className="w-5 h-5 text-gold" />
-              Serviços Mais Populares
-            </CardTitle>
-            <CardDescription>Por quantidade de atendimentos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!metrics?.topServices?.length ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Sem dados no período</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {metrics.topServices.map((service, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-gold w-6">{index + 1}º</span>
-                      <span className="text-sm text-foreground">{service.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-medium text-foreground">{service.count}x</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        R$ {service.revenue.toFixed(2)}
-                      </span>
-                    </div>
+      {/* Top Services */}
+      <Card variant="elevated">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BarChart3 className="w-5 h-5 text-gold" />
+            Serviços Mais Populares
+          </CardTitle>
+          <CardDescription>Por quantidade de atendimentos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!metrics?.topServices?.length ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Sem dados no período</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {metrics.topServices.map((service, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-gold w-6">{index + 1}º</span>
+                    <span className="text-sm text-foreground">{service.name}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Appointments */}
-        <Card variant="elevated">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock className="w-5 h-5 text-gold" />
-              Próximos Agendamentos
-            </CardTitle>
-            <CardDescription>Agendamentos de hoje</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {upcomingAppointments.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum agendamento próximo</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {upcomingAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground text-sm">
-                        {appointment.client_name || "Cliente"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {appointment.service?.name} • {appointment.barber?.name}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gold text-sm">
-                        {format(new Date(appointment.start_time), "HH:mm")}
-                      </p>
-                    </div>
+                  <div className="text-right">
+                    <span className="text-sm font-medium text-foreground">{service.count}x</span>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      R$ {service.revenue.toFixed(2)}
+                    </span>
                   </div>
-                ))}
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-2"
-                  onClick={() => navigate("/dashboard/schedule")}
-                >
-                  Ver agenda completa
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
