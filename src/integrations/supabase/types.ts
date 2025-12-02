@@ -52,10 +52,14 @@ export type Database = {
           client_id: string | null
           client_name: string | null
           client_phone: string | null
+          coupon_id: string | null
           created_at: string
+          discount_amount: number | null
           end_time: string
+          final_price: number | null
           id: string
           notes: string | null
+          original_price: number | null
           payment_status: Database["public"]["Enums"]["payment_status"]
           service_id: string
           shop_id: string
@@ -68,10 +72,14 @@ export type Database = {
           client_id?: string | null
           client_name?: string | null
           client_phone?: string | null
+          coupon_id?: string | null
           created_at?: string
+          discount_amount?: number | null
           end_time: string
+          final_price?: number | null
           id?: string
           notes?: string | null
+          original_price?: number | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           service_id: string
           shop_id: string
@@ -84,10 +92,14 @@ export type Database = {
           client_id?: string | null
           client_name?: string | null
           client_phone?: string | null
+          coupon_id?: string | null
           created_at?: string
+          discount_amount?: number | null
           end_time?: string
+          final_price?: number | null
           id?: string
           notes?: string | null
+          original_price?: number | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           service_id?: string
           shop_id?: string
@@ -101,6 +113,13 @@ export type Database = {
             columns: ["barber_id"]
             isOneToOne: false
             referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_coupons"
             referencedColumns: ["id"]
           },
           {
@@ -877,6 +896,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_coupon_usage: {
+        Args: { coupon_uuid: string }
+        Returns: undefined
       }
     }
     Enums: {
