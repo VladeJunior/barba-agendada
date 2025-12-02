@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, CalendarIcon, Clock, ChevronLeft, ChevronRight, X, Check } from "lucide-react";
+import { Plus, CalendarIcon, Clock, ChevronLeft, ChevronRight, X, Check, Percent } from "lucide-react";
 import { format, addMinutes, addDays, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -342,9 +342,21 @@ export default function Schedule() {
                       {statusLabels[appointment.status]}
                     </Badge>
                     
-                    <p className="font-medium text-gold ml-2">
-                      R$ {appointment.service?.price?.toFixed(2)}
-                    </p>
+                    {appointment.discount_amount && appointment.discount_amount > 0 ? (
+                      <div className="flex items-center gap-1 ml-2">
+                        <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
+                          <Percent className="w-3 h-3 mr-1" />
+                          -R$ {appointment.discount_amount.toFixed(2)}
+                        </Badge>
+                        <p className="font-medium text-gold">
+                          R$ {appointment.final_price?.toFixed(2)}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-medium text-gold ml-2">
+                        R$ {appointment.service?.price?.toFixed(2)}
+                      </p>
+                    )}
 
                     {appointment.status === "scheduled" && (
                       <div className="flex gap-1 ml-2">
