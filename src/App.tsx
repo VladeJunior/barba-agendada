@@ -40,6 +40,9 @@ import AdminMetrics from "./pages/admin/AdminMetrics";
 import AdminSupport from "./pages/admin/AdminSupport";
 import Support from "./pages/dashboard/Support";
 
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -54,6 +57,8 @@ function App() {
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/privacidade" element={<Privacy />} />
             <Route path="/agendar/:shopSlug" element={<Booking />} />
             <Route path="/agendar/:shopSlug/barbeiro/:barberId" element={<BarberProfile />} />
             <Route path="/agendar/:shopSlug/meus-agendamentos" element={<MyAppointmentsByShop />} />

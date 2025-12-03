@@ -69,12 +69,19 @@ export function Footer() {
             © 2025 InfoBarber. Todos os direitos reservados.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">
-              Termos de Uso
-            </a>
-            <a href="#" className="text-muted-foreground hover:text-gold transition-colors text-sm">
-              Política de Privacidade
-            </a>
+            <h4 className="font-semibold mb-4 text-white">Legal</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li>
+                  <Link to="/termos" className="hover:text-primary transition-colors">
+                    Termos de Uso
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/privacidade" className="hover:text-primary transition-colors">
+                    Política de Privacidade
+                  </Link>
+                </li>
+              </ul>
           </div>
         </div>
       </div>
