@@ -88,9 +88,37 @@ serve(async (req) => {
       if (payment.status === "approved") {
         console.log(`✅ Payment APPROVED for shop ${shop_id}, plan ${plan_id}`);
 
-        // Calculate next billing period (30 days from now)
-        const currentPeriodEndsAt = new Date();
-        currentPeriodEndsAt.setDate(currentPeriodEndsAt.getDate() + 30);
+        // Fetch current shop data to implement intelligent renewal
+        const { data: currentShop, error: fetchError } = await supabase
+          .from("shops")
+          .select("subscription_status, current_period_ends_at")
+          .eq("id", shop_id)
+          .single();
+
+        if (fetchError) {
+          console.error("Error fetching shop data:", fetchError);
+        }
+
+        // Calculate next billing period intelligently
+        let newPeriodEndsAt: Date;
+        
+        if (currentShop?.subscription_status === "expired") {
+          // If expired: new period = today + 30 days
+          newPeriodEndsAt = new Date();
+          newPeriodEndsAt.setDate(newPeriodEndsAt.getDate() + 30);
+          console.log("Shop was expired, setting new period from today + 30 days");
+        } else if (currentShop?.current_period_ends_at) {
+          // If active or past_due: new period = old_period_ends_at + 30 days
+          // This ensures the client doesn't lose days if they pay early
+          newPeriodEndsAt = new Date(currentShop.current_period_ends_at);
+          newPeriodEndsAt.setDate(newPeriodEndsAt.getDate() + 30);
+          console.log(`Shop was ${currentShop.subscription_status}, extending from previous end date + 30 days`);
+        } else {
+          // Fallback: today + 30 days
+          newPeriodEndsAt = new Date();
+          newPeriodEndsAt.setDate(newPeriodEndsAt.getDate() + 30);
+          console.log("No previous period, setting new period from today + 30 days");
+        }
 
         const { error: updateError } = await supabase
           .from("shops")
@@ -101,7 +129,7 @@ serve(async (req) => {
             payment_provider: "mercadopago",
             payment_customer_id: payment.payer?.id?.toString() || null,
             payment_subscription_id: payment.id?.toString() || null,
-            current_period_ends_at: currentPeriodEndsAt.toISOString(),
+            current_period_ends_at: newPeriodEndsAt.toISOString(),
             trial_ends_at: null,
           })
           .eq("id", shop_id);
@@ -109,7 +137,7 @@ serve(async (req) => {
         if (updateError) {
           console.error("❌ Error updating shop:", updateError);
         } else {
-          console.log(`✅ Shop ${shop_id} updated to plan ${plan_id} with active status`);
+          console.log(`✅ Shop ${shop_id} updated to plan ${plan_id} with active status, expires: ${newPeriodEndsAt.toISOString()}`);
         }
       } else if (payment.status === "pending" || payment.status === "in_process") {
         console.log(`⏳ Payment PENDING for shop ${shop_id} - status: ${payment.status}, detail: ${payment.status_detail}`);

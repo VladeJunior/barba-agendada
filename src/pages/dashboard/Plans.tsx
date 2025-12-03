@@ -83,6 +83,9 @@ export default function Plans() {
     currentPeriodEndsAt,
     isLoading,
     needsPlanSelection,
+    isBlocked,
+    isInGracePeriod,
+    graceDaysRemaining,
   } = useSubscription();
   const { data: shop } = useShop();
   const navigate = useNavigate();
@@ -191,6 +194,134 @@ export default function Plans() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-pulse text-gold">Carregando...</div>
+      </div>
+    );
+  }
+
+  // Blocked mode - user's subscription has expired
+  if (isBlocked) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Blocked Header */}
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 mx-auto rounded-full bg-destructive/20 flex items-center justify-center">
+            <AlertTriangle className="w-10 h-10 text-destructive" />
+          </div>
+          <h1 className="text-3xl font-display font-bold text-foreground">
+            Acesso Bloqueado
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            {status === "expired" 
+              ? "Sua assinatura expirou e o período de carência terminou. Para continuar usando o InfoBarber, escolha um plano abaixo."
+              : "Seu período de teste expirou. Para continuar usando o InfoBarber, escolha um plano abaixo."
+            }
+          </p>
+        </div>
+
+        {/* Current Plan Info */}
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="py-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center">
+                <Crown className="w-6 h-6 text-destructive" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Plano {getPlanDisplayName(currentPlan)}</p>
+                <p className="text-sm text-destructive">{getStatusDisplayName(status)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Plans Grid */}
+        <div className="grid gap-6 md:grid-cols-3">
+          {plans.map((planItem) => (
+            <Card
+              key={planItem.id}
+              className={`relative transition-all hover:scale-[1.02] ${
+                planItem.highlighted
+                  ? "border-gold shadow-lg shadow-gold/10 scale-[1.02]"
+                  : "border-border"
+              }`}
+            >
+              {planItem.highlighted && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-gold text-primary-foreground">
+                    <Zap className="w-3 h-3 mr-1" />
+                    Mais Popular
+                  </Badge>
+                </div>
+              )}
+
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="text-xl">{planItem.name}</CardTitle>
+                <CardDescription className="text-sm">{planItem.description}</CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="text-center">
+                  <span className="text-4xl font-bold text-foreground font-display">
+                    R$ {planItem.price}
+                  </span>
+                  <span className="text-muted-foreground">/mês</span>
+                </div>
+
+                <ul className="space-y-3">
+                  {planItem.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className={`w-full ${
+                    planItem.highlighted
+                      ? "bg-gold hover:bg-gold/90 text-primary-foreground"
+                      : ""
+                  }`}
+                  variant={planItem.highlighted ? "default" : "outline"}
+                  onClick={() => {
+                    setSelectedPlanForPayment(planItem);
+                    setPaymentDialogOpen(true);
+                  }}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Pagar e Reativar
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Help Card */}
+        <Card variant="elevated">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5 text-gold" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Precisa de ajuda?</h3>
+                <p className="text-sm text-muted-foreground">
+                  Entre em contato conosco pelo WhatsApp e teremos prazer em ajudar você.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Dialog */}
+        {selectedPlanForPayment && (
+          <PaymentDialog
+            open={paymentDialogOpen}
+            onOpenChange={setPaymentDialogOpen}
+            planId={selectedPlanForPayment.id}
+            planName={selectedPlanForPayment.name}
+            planPrice={selectedPlanForPayment.price}
+          />
+        )}
       </div>
     );
   }

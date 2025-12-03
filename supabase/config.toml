@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.expire-loyalty-points]
 verify_jwt = false
+
+[functions.check-subscription-expiration]
+verify_jwt = false
+
+[functions.send-billing-reminder]
+verify_jwt = false
