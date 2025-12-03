@@ -319,6 +319,38 @@ export type Database = {
           },
         ]
       }
+      billing_reminders: {
+        Row: {
+          id: string
+          period_ends_at: string
+          reminder_type: string
+          sent_at: string
+          shop_id: string
+        }
+        Insert: {
+          id?: string
+          period_ends_at: string
+          reminder_type: string
+          sent_at?: string
+          shop_id: string
+        }
+        Update: {
+          id?: string
+          period_ends_at?: string
+          reminder_type?: string
+          sent_at?: string
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_reminders_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocked_times: {
         Row: {
           barber_id: string

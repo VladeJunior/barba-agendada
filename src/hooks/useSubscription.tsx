@@ -58,6 +58,10 @@ interface SubscriptionData {
   planLimits: PlanLimits;
   isLoading: boolean;
   needsPlanSelection: boolean;
+  isBlocked: boolean;
+  isInGracePeriod: boolean;
+  graceDaysRemaining: number | null;
+  daysUntilExpiration: number | null;
 }
 
 export function useSubscription(): SubscriptionData {
@@ -89,16 +93,37 @@ export function useSubscription(): SubscriptionData {
   const planLimits = PLAN_LIMITS[plan];
   const maxBarbers = planLimits.maxBarbers;
 
+  const now = new Date();
+  const GRACE_PERIOD_DAYS = 3;
+
   // Calculate trial days remaining
   let trialDaysRemaining: number | null = null;
   let isTrialExpired = false;
 
   if (status === "trial" && trialEndsAt) {
-    const now = new Date();
     const diffTime = trialEndsAt.getTime() - now.getTime();
     trialDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     isTrialExpired = trialDaysRemaining <= 0;
   }
+
+  // Calculate days until expiration (for active subscriptions)
+  let daysUntilExpiration: number | null = null;
+  if (status === "active" && currentPeriodEndsAt) {
+    const diffTime = currentPeriodEndsAt.getTime() - now.getTime();
+    daysUntilExpiration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  // Calculate grace period remaining (for past_due subscriptions)
+  let graceDaysRemaining: number | null = null;
+  let isInGracePeriod = false;
+  if (status === "past_due" && currentPeriodEndsAt) {
+    const daysSinceExpiration = Math.ceil((now.getTime() - currentPeriodEndsAt.getTime()) / (1000 * 60 * 60 * 24));
+    graceDaysRemaining = GRACE_PERIOD_DAYS - daysSinceExpiration;
+    isInGracePeriod = graceDaysRemaining > 0;
+  }
+
+  // Check if user is blocked (expired status or trial expired)
+  const isBlocked = status === "expired" || (status === "trial" && isTrialExpired);
 
   const canAddBarber = barbersCount < maxBarbers;
   const needsPlanSelection = !hasSelectedPlan;
@@ -116,6 +141,10 @@ export function useSubscription(): SubscriptionData {
     planLimits,
     isLoading,
     needsPlanSelection,
+    isBlocked,
+    isInGracePeriod,
+    graceDaysRemaining,
+    daysUntilExpiration,
   };
 }
 

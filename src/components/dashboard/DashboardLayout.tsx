@@ -6,6 +6,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useShop } from "@/hooks/useShop";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
+import { SubscriptionWarningBanner } from "./SubscriptionWarningBanner";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
 import logo from "@/assets/infobarber-logo.jpg";
@@ -13,7 +14,16 @@ import logo from "@/assets/infobarber-logo.jpg";
 export function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
   const { role, isLoading: roleLoading } = useUserRole();
-  const { needsPlanSelection, isLoading: subscriptionLoading } = useSubscription();
+  const { 
+    needsPlanSelection, 
+    isLoading: subscriptionLoading, 
+    isBlocked, 
+    isInGracePeriod, 
+    graceDaysRemaining,
+    daysUntilExpiration,
+    status,
+    isTrialExpired,
+  } = useSubscription();
   const { data: shop } = useShop();
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,6 +42,15 @@ export function DashboardLayout() {
       navigate("/dashboard/plans");
     }
   }, [needsPlanSelection, subscriptionLoading, location.pathname, navigate]);
+
+  // Redirect blocked users to plans page
+  useEffect(() => {
+    if (subscriptionLoading || needsPlanSelection) return;
+    
+    if (isBlocked && location.pathname !== "/dashboard/plans") {
+      navigate("/dashboard/plans");
+    }
+  }, [isBlocked, subscriptionLoading, needsPlanSelection, location.pathname, navigate]);
 
   // Redirect barbers to their dashboard if they try to access owner-only pages
   useEffect(() => {
@@ -109,6 +128,22 @@ export function DashboardLayout() {
 
           {/* Main Content */}
           <main className="flex-1 p-6 overflow-auto">
+            {/* Subscription Warning Banner */}
+            {status === "past_due" && (
+              <SubscriptionWarningBanner 
+                status="past_due" 
+                graceDaysRemaining={graceDaysRemaining ?? undefined} 
+              />
+            )}
+            {isTrialExpired && status === "trial" && (
+              <SubscriptionWarningBanner status="trial_expired" />
+            )}
+            {status === "active" && daysUntilExpiration !== null && daysUntilExpiration <= 5 && (
+              <SubscriptionWarningBanner 
+                status="past_due" 
+                daysUntilExpiration={daysUntilExpiration} 
+              />
+            )}
             <Outlet />
           </main>
         </div>
