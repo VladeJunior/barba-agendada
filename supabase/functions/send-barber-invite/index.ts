@@ -105,8 +105,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending WhatsApp to:", formattedPhone);
     console.log("W-API instance:", shop.wapi_instance_id);
 
-    // Send WhatsApp message via W-API using the correct API endpoint
-    const wapiUrl = `https://api.w-api.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
+    // Send WhatsApp message via API
+    const wapiUrl = `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
     
     const message = `🎉 *Convite para InfoBarber*
 

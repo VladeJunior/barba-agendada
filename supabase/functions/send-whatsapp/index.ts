@@ -138,8 +138,8 @@ Até lá! 💈`;
       formattedPhone = "55" + formattedPhone;
     }
 
-    // Send message via W-API
-    const wapiUrl = `https://api.w-api.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
+    // Send message via WhatsApp API
+    const wapiUrl = `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
     
     console.log("Sending WhatsApp via W-API to:", formattedPhone);
 

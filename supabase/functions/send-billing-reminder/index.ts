@@ -91,8 +91,8 @@ serve(async (req) => {
         `Para mais informações, entre em contato conosco.`;
     }
 
-    // Send WhatsApp message via W-API
-    const wapiUrl = `https://api.w-api.online/v1/instance${shop.wapi_instance_id}/sendMessage`;
+    // Send WhatsApp message via API
+    const wapiUrl = `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
     
     const wapiResponse = await fetch(wapiUrl, {
       method: 'POST',
@@ -101,7 +101,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${shop.wapi_token}`,
       },
       body: JSON.stringify({
-        chatId: `${ownerPhone}@c.us`,
+        phone: ownerPhone.replace(/\D/g, ''),
         message: message,
       }),
     });

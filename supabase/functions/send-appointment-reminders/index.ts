@@ -35,7 +35,7 @@ async function sendWhatsAppMessage(
     }
 
     const response = await fetch(
-      `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+      `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${instanceId}`,
       {
         method: "POST",
         headers: {
