@@ -37,15 +37,24 @@ async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   try {
-    console.log(`Enviando mensagem para ${phone}:`, message.substring(0, 50) + "...");
+    // Format phone number (ensure it has country code)
+    let formattedPhone = phone.replace(/\D/g, "");
+    if (!formattedPhone.startsWith("55")) {
+      formattedPhone = "55" + formattedPhone;
+    }
     
-    const response = await fetch(`${WHATSAPP_API_URL}/send-message`, {
+    console.log(`Enviando mensagem para ${formattedPhone}:`, message.substring(0, 50) + "...");
+    
+    const wapiUrl = `${WHATSAPP_API_URL}/v1/message/send-text?instanceId=${instanceId}`;
+    
+    const response = await fetch(wapiUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
       body: JSON.stringify({
-        instanceId,
-        token,
-        phone,
+        phone: formattedPhone,
         message,
       }),
     });
