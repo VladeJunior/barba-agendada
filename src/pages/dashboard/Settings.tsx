@@ -132,7 +132,12 @@ export default function Settings() {
       } else {
         // Response is JSON
         const data = await response.json();
-        if (data.qrCode) {
+        console.log("QR Code API response:", data);
+        if (data.qrcode) {
+          // Novo formato da API BarberBot (lowercase)
+          setQrCodeImage(data.qrcode);
+        } else if (data.qrCode) {
+          // Formato legado W-API (camelCase)
           setQrCodeImage(data.qrCode);
         } else if (data.base64) {
           setQrCodeImage(`data:image/png;base64,${data.base64}`);
@@ -141,9 +146,9 @@ export default function Settings() {
           setQrDialogOpen(false);
           checkInstanceStatus();
         } else {
-          toast.info("WhatsApp já está conectado!");
+          console.log("Resposta inesperada da API:", data);
+          toast.error("Formato de QR Code não reconhecido");
           setQrDialogOpen(false);
-          checkInstanceStatus();
         }
       }
     } catch (error: any) {
