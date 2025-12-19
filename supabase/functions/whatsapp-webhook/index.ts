@@ -37,13 +37,8 @@ async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   try {
-    // Format phone number (ensure it has country code)
-    let formattedPhone = phone.replace(/\D/g, "");
-    if (!formattedPhone.startsWith("55")) {
-      formattedPhone = "55" + formattedPhone;
-    }
-    
-    console.log(`Enviando mensagem para ${formattedPhone}:`, message.substring(0, 50) + "...");
+    // Use phone number exactly as received (already contains country code)
+    console.log(`Enviando mensagem para ${phone}:`, message.substring(0, 50) + "...");
     
     const wapiUrl = `${WHATSAPP_API_URL}/v1/message/send-text?instanceId=${instanceId}`;
     
@@ -54,7 +49,7 @@ async function sendWhatsAppMessage(
         "Authorization": `Bearer ${token}`,
       },
       body: JSON.stringify({
-        phone: formattedPhone,
+        phone: phone,
         message,
       }),
     });
