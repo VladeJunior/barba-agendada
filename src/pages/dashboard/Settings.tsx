@@ -53,7 +53,7 @@ export default function Settings() {
     }
     setCheckingStatus(true);
     try {
-      const response = await fetch(`https://api.w-api.app/v1/instance/status-instance?instanceId=${formData.wapi_instance_id}`, {
+      const response = await fetch(`https://barber-bot-production.up.railway.app/v1/instance/status-instance?instanceId=${formData.wapi_instance_id}`, {
         headers: {
           Authorization: `Bearer ${formData.wapi_token}`
         }
@@ -82,7 +82,7 @@ export default function Settings() {
     if (!formData.wapi_instance_id || !formData.wapi_token) return;
     setDisconnecting(true);
     try {
-      const response = await fetch(`https://api.w-api.app/v1/instance/disconnect?instanceId=${formData.wapi_instance_id}`, {
+      const response = await fetch(`https://barber-bot-production.up.railway.app/v1/instance/disconnect?instanceId=${formData.wapi_instance_id}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${formData.wapi_token}`
@@ -110,7 +110,7 @@ export default function Settings() {
     setQrCodeImage(null);
     setQrDialogOpen(true);
     try {
-      const response = await fetch(`https://api.w-api.app/v1/instance/qr-code?instanceId=${formData.wapi_instance_id}&image=enable`, {
+      const response = await fetch(`https://barber-bot-production.up.railway.app/v1/instance/qr-code?instanceId=${formData.wapi_instance_id}&image=enable`, {
         headers: {
           Authorization: `Bearer ${formData.wapi_token}`
         }

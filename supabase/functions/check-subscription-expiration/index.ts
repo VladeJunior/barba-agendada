@@ -189,7 +189,7 @@ serve(async (req) => {
             if (message) {
               try {
                 const wapiResponse = await fetch(
-                  `https://api.w-api.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`,
+                  `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`,
                   {
                     method: "POST",
                     headers: {
