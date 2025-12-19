@@ -396,6 +396,47 @@ export type Database = {
           },
         ]
       }
+      bot_sessions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          phone: string
+          shop_id: string
+          step: string
+          temp_data: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          phone: string
+          shop_id: string
+          step?: string
+          temp_data?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          phone?: string
+          shop_id?: string
+          step?: string
+          temp_data?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_sessions_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_coupons: {
         Row: {
           code: string
