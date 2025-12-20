@@ -489,7 +489,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card variant="elevated" className="mt-6">
+        <Card variant="elevated" className="mt-6" id="whatsapp-connect-section">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-gold" />
@@ -527,7 +527,7 @@ export default function Settings() {
                   {connectionStatus === "connected" ? "WhatsApp conectado! Você pode testar ou desconectar." : "Conecte seu WhatsApp escaneando o QR Code"}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {connectionStatus !== "connected" ? <Button type="button" variant="outline" className="gap-2" onClick={fetchQrCode} disabled={loadingQr}>
+                  {connectionStatus !== "connected" ? <Button type="button" variant="outline" className="gap-2" onClick={fetchQrCode} disabled={loadingQr} id="whatsapp-connect-btn">
                       {loadingQr ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
                       Conectar WhatsApp
                     </Button> : <Button type="button" variant="destructive" className="gap-2" onClick={handleDisconnect} disabled={disconnecting}>
