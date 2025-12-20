@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown, ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown, ImageIcon, HelpCircle } from "lucide-react";
 import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
 import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
@@ -38,6 +38,7 @@ export default function Team() {
   const [blockedTimesBarber, setBlockedTimesBarber] = useState<Barber | null>(null);
   const [linkBarber, setLinkBarber] = useState<Barber | null>(null);
   const [portfolioBarber, setPortfolioBarber] = useState<Barber | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const [formData, setFormData] = useState<BarberInput>({
     name: "",
@@ -169,6 +170,15 @@ export default function Team() {
             <Badge variant="secondary" className="text-xs">
               {barbersUsed} / {maxBarbers === Infinity ? "∞" : maxBarbers}
             </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowHelpModal(true)}
+              title="Ajuda"
+              className="h-8 w-8"
+            >
+              <HelpCircle className="w-5 h-5 text-muted-foreground hover:text-gold transition-colors" />
+            </Button>
           </div>
           <p className="text-muted-foreground">Gerencie os barbeiros da sua barbearia</p>
         </div>
@@ -444,6 +454,107 @@ export default function Team() {
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ["barbers"] })}
         />
       )}
+
+      {/* Help Modal */}
+      <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-gold" />
+              Guia de Ações
+            </DialogTitle>
+            <DialogDescription>
+              Entenda o que cada botão faz no card do barbeiro
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 py-4">
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-purple-500/10 shrink-0">
+                <ImageIcon className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Portfólio</h4>
+                <p className="text-sm text-muted-foreground">
+                  Adicione fotos dos trabalhos realizados pelo barbeiro para exibir na página pública de agendamento.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-gold/10 shrink-0">
+                <Clock className="w-5 h-5 text-gold" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Horários de Trabalho</h4>
+                <p className="text-sm text-muted-foreground">
+                  Configure os dias e horários que o barbeiro está disponível para atendimento.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-orange-500/10 shrink-0">
+                <CalendarX className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Bloqueios e Folgas</h4>
+                <p className="text-sm text-muted-foreground">
+                  Marque férias, folgas ou horários específicos em que o barbeiro não poderá atender.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
+                <Link className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Vincular Conta</h4>
+                <p className="text-sm text-muted-foreground">
+                  Conecte o perfil do barbeiro a uma conta de usuário para que ele acesse seu próprio painel.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-green-500/10 shrink-0">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Conta Vinculada</h4>
+                <p className="text-sm text-muted-foreground">
+                  Indica que o barbeiro já possui uma conta vinculada. Clique para gerenciar o acesso.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-muted shrink-0">
+                <Pencil className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Editar</h4>
+                <p className="text-sm text-muted-foreground">
+                  Altere nome, telefone, biografia, foto e taxa de comissão do barbeiro.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-destructive/10 shrink-0">
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Remover</h4>
+                <p className="text-sm text-muted-foreground">
+                  Exclui o barbeiro permanentemente da equipe. Esta ação não pode ser desfeita.
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {portfolioBarber && (
         <PortfolioDialog
