@@ -1178,7 +1178,32 @@ serve(async (req) => {
       
       // Resetar sessão
       await resetSession(supabase, session.id);
-      session = { ...session, step: "welcome", temp_data: {} };
+      
+      // Enviar mensagem personalizada de retorno
+      await sendWhatsAppMessage(
+        instanceId,
+        shop.wapi_token || "",
+        sender,
+        `👋 Olá! Parece que faz um tempinho que você não interage conosco.
+
+Vamos recomeçar? Estou aqui para ajudar! 😊
+
+Bem-vindo(a) à *${shop.name}*! Como posso ajudar?
+
+1️⃣ Agendar um horário
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente
+
+_Digite o número da opção desejada._`
+      );
+
+      // Atualizar sessão para menu
+      await updateSession(supabase, session.id, "menu", {});
+
+      return new Response(
+        JSON.stringify({ success: true, action: "session_timeout_reset" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Atualizar nome do cliente se disponível
