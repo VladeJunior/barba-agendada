@@ -95,6 +95,7 @@ export function DashboardSidebar() {
                       className="hover:bg-muted/50"
                       activeClassName="bg-gold/10 text-gold"
                       onClick={handleMenuClick}
+                      id={item.url === "/dashboard/settings" ? "sidebar-settings-link" : undefined}
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>

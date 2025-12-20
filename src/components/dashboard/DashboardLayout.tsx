@@ -4,9 +4,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useShop } from "@/hooks/useShop";
+import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { SubscriptionWarningBanner } from "./SubscriptionWarningBanner";
+import { WhatsAppTour } from "./WhatsAppTour";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
 import logo from "@/assets/infobarber-logo.jpg";
@@ -25,6 +27,7 @@ export function DashboardLayout() {
     isTrialExpired,
   } = useSubscription();
   const { data: shop } = useShop();
+  const { connectionStatus, isWapiConfigured } = useWhatsAppStatus();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -106,6 +109,7 @@ export function DashboardLayout() {
 
   return (
     <SidebarProvider>
+      <WhatsAppTour connectionStatus={connectionStatus} isWapiConfigured={isWapiConfigured} />
       <div className="min-h-screen flex w-full bg-background">
         <DashboardSidebar />
         
