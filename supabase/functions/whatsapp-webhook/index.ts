@@ -38,12 +38,27 @@ interface WebhookPayload {
   senderName?: string;
 }
 
+// Timeout de inatividade (30 minutos)
+const SESSION_TIMEOUT_MINUTES = 30;
+
 interface Session {
   id: string;
   shop_id: string;
   phone: string;
   step: string;
   temp_data: Record<string, any>;
+  updated_at?: string;
+}
+
+// Verificar se a sessão expirou por inatividade
+function isSessionTimedOut(session: Session): boolean {
+  if (!session.updated_at) return false;
+  
+  const lastUpdate = new Date(session.updated_at);
+  const now = new Date();
+  const diffMinutes = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+  
+  return diffMinutes > SESSION_TIMEOUT_MINUTES;
 }
 
 interface Shop {
@@ -1155,7 +1170,16 @@ serve(async (req) => {
     }
 
     // Buscar ou criar sessão
-    const session = await getOrCreateSession(supabase, shop.id, sender);
+    let session = await getOrCreateSession(supabase, shop.id, sender);
+
+    // Verificar timeout de inatividade (30 minutos)
+    if (isSessionTimedOut(session) && session.step !== "welcome") {
+      console.log(`Sessão expirada por inatividade. Última interação: ${session.updated_at}, Step anterior: ${session.step}`);
+      
+      // Resetar sessão
+      await resetSession(supabase, session.id);
+      session = { ...session, step: "welcome", temp_data: {} };
+    }
 
     // Atualizar nome do cliente se disponível
     await updateClientName(supabase, shop.id, sender, senderName);
