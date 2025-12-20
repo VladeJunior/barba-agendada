@@ -486,6 +486,30 @@ async function getClientAppointments(
   return data || [];
 }
 
+// Contar agendamentos ativos do cliente (anti-spam)
+async function countActiveAppointments(
+  supabase: any,
+  shopId: string,
+  phone: string
+): Promise<number> {
+  const cleanPhone = phone.replace(/\D/g, "");
+  const now = new Date().toISOString();
+
+  const { count, error } = await supabase
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .eq("client_phone", cleanPhone)
+    .gte("start_time", now)
+    .in("status", ["scheduled", "confirmed"]);
+
+  if (error) {
+    console.error("Erro ao contar agendamentos ativos:", error);
+    return 0;
+  }
+  return count || 0;
+}
+
 // Handlers para cada step
 
 async function handleWelcome(
@@ -518,6 +542,23 @@ async function handleMenu(
   const choice = message.trim();
 
   if (choice === "1") {
+    // Verificação anti-spam: máximo 2 agendamentos ativos
+    const activeCount = await countActiveAppointments(supabase, shop.id, session.phone);
+    
+    if (activeCount >= 2) {
+      return {
+        nextStep: "menu",
+        tempData: {},
+        response: `🚫 Você já possui ${activeCount} agendamentos ativos.
+
+Para marcar um novo horário, por favor aguarde o seu atendimento ou cancele um agendamento anterior no menu *"Meus Agendamentos"*.
+
+1️⃣ Agendar um horário
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente`,
+      };
+    }
+
     const services = await getServices(supabase, shop.id);
 
     if (services.length === 0) {
