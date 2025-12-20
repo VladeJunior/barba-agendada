@@ -12,6 +12,7 @@ interface WebhookPayload {
   instanceId: string;
   msgContent: string;
   sender: string;
+  senderName?: string;
 }
 
 interface Session {
@@ -335,6 +336,58 @@ function formatDateDisplay(date: Date): string {
   return date.toLocaleDateString("pt-BR", options);
 }
 
+// Atualizar ou criar nome do cliente na tabela loyalty_points
+async function updateClientName(
+  supabase: any,
+  shopId: string,
+  phone: string,
+  senderName: string | undefined
+): Promise<void> {
+  if (!senderName || senderName.trim() === "") return;
+
+  const cleanPhone = phone.replace(/\D/g, "");
+  const name = senderName.trim();
+
+  try {
+    // Buscar cliente existente na loyalty_points
+    const { data: existing } = await supabase
+      .from("loyalty_points")
+      .select("id, client_name")
+      .eq("shop_id", shopId)
+      .eq("client_phone", cleanPhone)
+      .maybeSingle();
+
+    if (existing) {
+      // Se nome está vazio ou é genérico, atualiza
+      const currentName = existing.client_name || "";
+      const isGeneric =
+        currentName === "" ||
+        currentName.toLowerCase() === "cliente" ||
+        currentName.toLowerCase() === "null";
+
+      if (isGeneric) {
+        await supabase
+          .from("loyalty_points")
+          .update({ client_name: name })
+          .eq("id", existing.id);
+        console.log(`Nome do cliente atualizado: ${cleanPhone} -> ${name}`);
+      }
+    } else {
+      // Criar registro de fidelidade com o nome
+      await supabase.from("loyalty_points").insert({
+        shop_id: shopId,
+        client_phone: cleanPhone,
+        client_name: name,
+        total_points: 0,
+        lifetime_points: 0,
+      });
+      console.log(`Novo cliente criado: ${cleanPhone} -> ${name}`);
+    }
+  } catch (error) {
+    console.error("Erro ao atualizar nome do cliente:", error);
+  }
+}
+
 // Handlers para cada step
 
 async function handleWelcome(
@@ -605,6 +658,14 @@ _ou 0 para cancelar_`,
   // Formatar telefone para salvar
   const clientPhone = session.phone.replace(/\D/g, "");
 
+  // Buscar nome do cliente no loyalty_points
+  const { data: clientData } = await supabase
+    .from("loyalty_points")
+    .select("client_name")
+    .eq("shop_id", shop.id)
+    .eq("client_phone", clientPhone)
+    .maybeSingle();
+
   const { data: appointment, error } = await supabase
     .from("appointments")
     .insert({
@@ -612,6 +673,7 @@ _ou 0 para cancelar_`,
       barber_id: session.temp_data.barber_id,
       service_id: session.temp_data.service_id,
       client_phone: clientPhone,
+      client_name: clientData?.client_name || null,
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       status: "confirmed",
@@ -706,9 +768,9 @@ serve(async (req) => {
 
   try {
     const payload: WebhookPayload = await req.json();
-    const { instanceId, msgContent, sender } = payload;
+    const { instanceId, msgContent, sender, senderName } = payload;
 
-    console.log("Webhook recebido:", { instanceId, msgContent, sender });
+    console.log("Webhook recebido:", { instanceId, msgContent, sender, senderName });
 
     if (!instanceId || !msgContent || !sender) {
       return new Response(
@@ -735,6 +797,9 @@ serve(async (req) => {
 
     // Buscar ou criar sessão
     const session = await getOrCreateSession(supabase, shop.id, sender);
+
+    // Atualizar nome do cliente se disponível
+    await updateClientName(supabase, shop.id, sender, senderName);
 
     // Verificar comando de cancelamento
     const lowerMsg = msgContent.toLowerCase().trim();
