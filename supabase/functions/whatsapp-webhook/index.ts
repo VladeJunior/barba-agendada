@@ -455,6 +455,37 @@ async function updateClientName(
   }
 }
 
+// Buscar agendamentos futuros do cliente
+async function getClientAppointments(
+  supabase: any,
+  shopId: string,
+  phone: string
+): Promise<any[]> {
+  const cleanPhone = phone.replace(/\D/g, "");
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(`
+      id,
+      start_time,
+      status,
+      service:services!inner(name),
+      barber:barbers!inner(name)
+    `)
+    .eq("shop_id", shopId)
+    .eq("client_phone", cleanPhone)
+    .gte("start_time", now)
+    .not("status", "in", '("cancelled","no_show")')
+    .order("start_time");
+
+  if (error) {
+    console.error("Erro ao buscar agendamentos:", error);
+    return [];
+  }
+  return data || [];
+}
+
 // Handlers para cada step
 
 async function handleWelcome(
@@ -471,7 +502,8 @@ async function handleWelcome(
 Como posso te ajudar?
 
 1️⃣ Agendar um horário
-2️⃣ Falar com um atendente
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente
 
 _Digite o número da opção desejada_`,
   };
@@ -519,6 +551,56 @@ _ou 0 para cancelar_`,
   }
 
   if (choice === "2") {
+    // Meus agendamentos
+    const appointments = await getClientAppointments(supabase, shop.id, session.phone);
+
+    if (appointments.length === 0) {
+      return {
+        nextStep: "menu",
+        tempData: {},
+        response: `📅 Você não tem agendamentos futuros.
+
+1️⃣ Agendar um horário
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente`,
+      };
+    }
+
+    // Criar mapeamento ID temporário → ID real
+    const appointmentMap: Record<number, string> = {};
+    const listItems = appointments.map((apt: any, index: number) => {
+      appointmentMap[index + 1] = apt.id;
+      const date = new Date(apt.start_time);
+      const dateStr = date.toLocaleDateString("pt-BR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      });
+      const timeStr = date.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      });
+      return `${index + 1}️⃣ ${dateStr} às ${timeStr} - ${apt.service.name}`;
+    });
+
+    return {
+      nextStep: "manage_appointment",
+      tempData: {
+        appointment_map: appointmentMap,
+        appointments: appointments,
+      },
+      response: `📅 *Seus Agendamentos*
+
+${listItems.join("\n")}
+
+_Digite o número do agendamento para gerenciar_
+_ou 0 para voltar_`,
+    };
+  }
+
+  if (choice === "3") {
     return {
       nextStep: "human_support",
       tempData: {},
@@ -531,10 +613,11 @@ _Digite 0 para voltar ao menu_`,
   return {
     nextStep: "menu",
     tempData: {},
-    response: `Desculpe, não entendi. Por favor, digite *1* ou *2*.
+    response: `Desculpe, não entendi. Por favor, digite *1*, *2* ou *3*.
 
 1️⃣ Agendar um horário
-2️⃣ Falar com um atendente`,
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente`,
   };
 }
 
@@ -815,6 +898,164 @@ _Digite 0 para voltar ao menu_`,
   };
 }
 
+async function handleManageAppointment(
+  supabase: any,
+  session: Session,
+  message: string,
+  shop: Shop
+): Promise<{ nextStep: string; tempData: Record<string, any>; response: string }> {
+  const choice = parseInt(message.trim());
+  const appointmentMap = session.temp_data.appointment_map || {};
+  const appointments = session.temp_data.appointments || [];
+
+  // Validar escolha
+  if (isNaN(choice) || !appointmentMap[choice]) {
+    return {
+      nextStep: "manage_appointment",
+      tempData: session.temp_data,
+      response: `Opção inválida. Digite um número da lista.
+
+_ou 0 para voltar_`,
+    };
+  }
+
+  // Encontrar o agendamento selecionado
+  const selectedApt = appointments.find(
+    (apt: any) => apt.id === appointmentMap[choice]
+  );
+
+  const date = new Date(selectedApt.start_time);
+  const dateStr = date.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    timeZone: "America/Sao_Paulo",
+  });
+  const timeStr = date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+
+  return {
+    nextStep: "appointment_action",
+    tempData: {
+      ...session.temp_data,
+      selected_appointment_id: appointmentMap[choice],
+      selected_appointment: selectedApt,
+    },
+    response: `📋 *Agendamento Selecionado*
+
+📅 ${dateStr}
+🕐 ${timeStr}
+💈 ${selectedApt.service.name}
+👤 ${selectedApt.barber.name}
+
+O que deseja fazer?
+
+1️⃣ Cancelar agendamento
+2️⃣ Reagendar
+3️⃣ Voltar
+
+_Digite o número da opção_`,
+  };
+}
+
+async function handleAppointmentAction(
+  supabase: any,
+  session: Session,
+  message: string,
+  shop: Shop
+): Promise<{ nextStep: string; tempData: Record<string, any>; response: string }> {
+  const choice = message.trim();
+  const appointmentId = session.temp_data.selected_appointment_id;
+
+  // CANCELAR
+  if (choice === "1") {
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: "cancelled" })
+      .eq("id", appointmentId);
+
+    if (error) {
+      console.error("Erro ao cancelar:", error);
+      return {
+        nextStep: "menu",
+        tempData: {},
+        response: `❌ Erro ao cancelar. Tente novamente.
+
+1️⃣ Agendar um horário
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente`,
+      };
+    }
+
+    return {
+      nextStep: "menu",
+      tempData: {},
+      response: `✅ Agendamento cancelado com sucesso!
+
+1️⃣ Agendar um horário
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente`,
+    };
+  }
+
+  // REAGENDAR
+  if (choice === "2") {
+    // Cancelar agendamento atual
+    await supabase
+      .from("appointments")
+      .update({ status: "cancelled" })
+      .eq("id", appointmentId);
+
+    // Buscar serviços para iniciar novo agendamento
+    const services = await getServices(supabase, shop.id);
+    const serviceList = services
+      .map(
+        (s: any, i: number) =>
+          `${i + 1}️⃣ ${s.name} - ${formatPrice(s.price)} (${s.duration_minutes} min)`
+      )
+      .join("\n");
+
+    return {
+      nextStep: "select_service",
+      tempData: { services },
+      response: `🔄 Agendamento anterior cancelado. Vamos reagendar!
+
+💈 *Nossos Serviços*
+
+${serviceList}
+
+_Digite o número do serviço_
+_ou 0 para cancelar_`,
+    };
+  }
+
+  // VOLTAR
+  if (choice === "3") {
+    return {
+      nextStep: "menu",
+      tempData: {},
+      response: `Como posso te ajudar?
+
+1️⃣ Agendar um horário
+2️⃣ Meus agendamentos
+3️⃣ Falar com um atendente`,
+    };
+  }
+
+  return {
+    nextStep: "appointment_action",
+    tempData: session.temp_data,
+    response: `Opção inválida. Digite *1*, *2* ou *3*.
+
+1️⃣ Cancelar agendamento
+2️⃣ Reagendar
+3️⃣ Voltar`,
+  };
+}
+
 // Handler principal
 const stepHandlers: Record<
   string,
@@ -833,6 +1074,8 @@ const stepHandlers: Record<
   select_time: handleSelectTime,
   confirmed: handleConfirmed,
   human_support: handleHumanSupport,
+  manage_appointment: handleManageAppointment,
+  appointment_action: handleAppointmentAction,
 };
 
 serve(async (req) => {
