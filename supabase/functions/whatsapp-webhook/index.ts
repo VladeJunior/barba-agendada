@@ -8,6 +8,29 @@ const corsHeaders = {
 
 const WHATSAPP_API_URL = "https://barber-bot-production.up.railway.app";
 
+// Timezone de São Paulo (UTC-3)
+const SAO_PAULO_OFFSET_HOURS = -3;
+
+// Obter data/hora atual em São Paulo
+function getNowInSaoPaulo(): Date {
+  const now = new Date();
+  // Converter UTC para São Paulo (subtrair 3 horas do UTC = adicionar ao timestamp)
+  return new Date(now.getTime() + SAO_PAULO_OFFSET_HOURS * 60 * 60 * 1000);
+}
+
+// Converter horário de São Paulo para UTC (para salvar no banco)
+function saoPauloToUTC(date: Date): Date {
+  // São Paulo é UTC-3, então para converter para UTC adicionamos 3 horas
+  return new Date(date.getTime() - SAO_PAULO_OFFSET_HOURS * 60 * 60 * 1000);
+}
+
+// Criar data em São Paulo a partir de ano/mês/dia
+function createDateInSaoPaulo(year: number, month: number, day: number, hours = 0, mins = 0): Date {
+  // Criar data como se fosse em São Paulo
+  const date = new Date(Date.UTC(year, month, day, hours - SAO_PAULO_OFFSET_HOURS, mins, 0, 0));
+  return date;
+}
+
 interface WebhookPayload {
   instanceId: string;
   msgContent: string;
@@ -181,20 +204,25 @@ async function getBarbers(supabase: any, shopId: string) {
   return data || [];
 }
 
-// Parse de data (hoje, amanhã, DD/MM)
-function parseDate(input: string): Date | null {
+// Parse de data (hoje, amanhã, DD/MM) - retorna data em São Paulo
+function parseDate(input: string): { year: number; month: number; day: number } | null {
   const lower = input.toLowerCase().trim();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const nowSP = getNowInSaoPaulo();
+  const todayYear = nowSP.getUTCFullYear();
+  const todayMonth = nowSP.getUTCMonth();
+  const todayDay = nowSP.getUTCDate();
 
   if (lower === "hoje") {
-    return today;
+    return { year: todayYear, month: todayMonth, day: todayDay };
   }
 
   if (lower === "amanhã" || lower === "amanha") {
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow;
+    const tomorrow = new Date(Date.UTC(todayYear, todayMonth, todayDay + 1));
+    return { 
+      year: tomorrow.getUTCFullYear(), 
+      month: tomorrow.getUTCMonth(), 
+      day: tomorrow.getUTCDate() 
+    };
   }
 
   // Tentar parse DD/MM ou DD/MM/YYYY
@@ -202,30 +230,45 @@ function parseDate(input: string): Date | null {
   if (match) {
     const day = parseInt(match[1]);
     const month = parseInt(match[2]) - 1;
-    let year = match[3] ? parseInt(match[3]) : today.getFullYear();
+    let year = match[3] ? parseInt(match[3]) : todayYear;
     if (year < 100) year += 2000;
 
-    const date = new Date(year, month, day);
-    date.setHours(0, 0, 0, 0);
-
-    // Verificar se a data é válida e não é passada
-    if (date >= today && date.getDate() === day && date.getMonth() === month) {
-      return date;
+    // Verificar se a data é válida
+    const testDate = new Date(Date.UTC(year, month, day));
+    const isValidDate = testDate.getUTCDate() === day && testDate.getUTCMonth() === month;
+    
+    // Verificar se não é passada
+    const inputDate = new Date(Date.UTC(year, month, day));
+    const todayDate = new Date(Date.UTC(todayYear, todayMonth, todayDay));
+    
+    if (isValidDate && inputDate >= todayDate) {
+      return { year, month, day };
     }
   }
 
   return null;
 }
 
-// Calcular horários disponíveis
+// Interface para data parseada
+interface ParsedDate {
+  year: number;
+  month: number;
+  day: number;
+}
+
+// Calcular horários disponíveis (recebe data em São Paulo)
 async function getAvailableSlots(
   supabase: any,
   barberId: string,
-  date: Date,
+  parsedDate: ParsedDate,
   serviceDuration: number,
   shopId: string
 ): Promise<string[]> {
-  const dayOfWeek = date.getDay();
+  const { year, month, day } = parsedDate;
+  
+  // Calcular dia da semana baseado na data
+  const dateForDayOfWeek = new Date(Date.UTC(year, month, day));
+  const dayOfWeek = dateForDayOfWeek.getUTCDay();
 
   // 1. Buscar horário de trabalho do barbeiro
   const { data: workingHours } = await supabase
@@ -242,19 +285,17 @@ async function getAvailableSlots(
     return [];
   }
 
-  // 2. Buscar blocked_times para esta data
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  // 2. Buscar blocked_times para esta data (converter para UTC para query)
+  const startOfDayUTC = createDateInSaoPaulo(year, month, day, 0, 0);
+  const endOfDayUTC = createDateInSaoPaulo(year, month, day, 23, 59);
 
   const { data: blockedTimes } = await supabase
     .from("blocked_times")
     .select("start_time, end_time")
     .eq("barber_id", barberId)
     .eq("shop_id", shopId)
-    .gte("start_time", startOfDay.toISOString())
-    .lte("end_time", endOfDay.toISOString());
+    .gte("start_time", startOfDayUTC.toISOString())
+    .lte("end_time", endOfDayUTC.toISOString());
 
   // 3. Buscar agendamentos existentes
   const { data: appointments } = await supabase
@@ -263,56 +304,79 @@ async function getAvailableSlots(
     .eq("barber_id", barberId)
     .eq("shop_id", shopId)
     .not("status", "in", '("cancelled","no_show")')
-    .gte("start_time", startOfDay.toISOString())
-    .lte("start_time", endOfDay.toISOString());
+    .gte("start_time", startOfDayUTC.toISOString())
+    .lte("start_time", endOfDayUTC.toISOString());
 
   // 4. Gerar slots de 30 minutos
   const slots: string[] = [];
   const [startHour, startMin] = workingHours.start_time.split(":").map(Number);
   const [endHour, endMin] = workingHours.end_time.split(":").map(Number);
 
-  const current = new Date(date);
-  current.setHours(startHour, startMin, 0, 0);
+  // Horário atual em São Paulo
+  const nowSP = getNowInSaoPaulo();
+  const nowHour = nowSP.getUTCHours();
+  const nowMin = nowSP.getUTCMinutes();
+  const todaySP = {
+    year: nowSP.getUTCFullYear(),
+    month: nowSP.getUTCMonth(),
+    day: nowSP.getUTCDate()
+  };
+  
+  const isToday = year === todaySP.year && month === todaySP.month && day === todaySP.day;
 
-  const end = new Date(date);
-  end.setHours(endHour, endMin, 0, 0);
+  let currentHour = startHour;
+  let currentMin = startMin;
 
-  const now = new Date();
-
-  while (current < end) {
-    const slotEnd = new Date(current.getTime() + serviceDuration * 60000);
+  while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+    const slotEndMin = currentMin + serviceDuration;
+    let slotEndHour = currentHour + Math.floor(slotEndMin / 60);
+    let slotEndMinNormalized = slotEndMin % 60;
 
     // Verificar se o slot cabe antes do fim do expediente
-    if (slotEnd > end) break;
+    if (slotEndHour > endHour || (slotEndHour === endHour && slotEndMinNormalized > endMin)) {
+      break;
+    }
 
-    // Verificar se é horário passado
-    if (current <= now) {
-      current.setMinutes(current.getMinutes() + 30);
+    // Verificar se é horário passado (só para hoje)
+    if (isToday && (currentHour < nowHour || (currentHour === nowHour && currentMin <= nowMin))) {
+      currentMin += 30;
+      if (currentMin >= 60) {
+        currentHour++;
+        currentMin -= 60;
+      }
       continue;
     }
+
+    // Criar timestamps UTC para comparação
+    const slotStartUTC = createDateInSaoPaulo(year, month, day, currentHour, currentMin);
+    const slotEndUTC = createDateInSaoPaulo(year, month, day, slotEndHour, slotEndMinNormalized);
 
     // Verificar conflito com blocked_times
     const blockedConflict = blockedTimes?.some((bt: any) => {
       const btStart = new Date(bt.start_time);
       const btEnd = new Date(bt.end_time);
-      return current < btEnd && slotEnd > btStart;
+      return slotStartUTC < btEnd && slotEndUTC > btStart;
     });
 
     // Verificar conflito com appointments
     const appointmentConflict = appointments?.some((apt: any) => {
       const aptStart = new Date(apt.start_time);
       const aptEnd = new Date(apt.end_time);
-      return current < aptEnd && slotEnd > aptStart;
+      return slotStartUTC < aptEnd && slotEndUTC > aptStart;
     });
 
     if (!blockedConflict && !appointmentConflict) {
-      const hours = current.getHours().toString().padStart(2, "0");
-      const mins = current.getMinutes().toString().padStart(2, "0");
-      slots.push(`${hours}:${mins}`);
+      const hoursStr = currentHour.toString().padStart(2, "0");
+      const minsStr = currentMin.toString().padStart(2, "0");
+      slots.push(`${hoursStr}:${minsStr}`);
     }
 
     // Próximo slot (30 min)
-    current.setMinutes(current.getMinutes() + 30);
+    currentMin += 30;
+    if (currentMin >= 60) {
+      currentHour++;
+      currentMin -= 60;
+    }
   }
 
   return slots;
@@ -326,12 +390,15 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-// Formatar data para exibição
-function formatDateDisplay(date: Date): string {
+// Formatar data para exibição (aceita ParsedDate)
+function formatDateDisplay(parsedDate: ParsedDate): string {
+  const { year, month, day } = parsedDate;
+  const date = new Date(Date.UTC(year, month, day, 12, 0, 0)); // Usar meio-dia para evitar problemas de timezone
   const options: Intl.DateTimeFormatOptions = {
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: "America/Sao_Paulo",
   };
   return date.toLocaleDateString("pt-BR", options);
 }
@@ -613,7 +680,7 @@ Por favor, escolha outra data ou digite *0* para cancelar.`,
     nextStep: "select_time",
     tempData: {
       ...session.temp_data,
-      selected_date: date.toISOString().split("T")[0],
+      selected_date: date, // Salvar o objeto ParsedDate
       available_slots: slots,
     },
     response: `🕐 *Horários disponíveis para ${formatDateDisplay(date)} com ${session.temp_data.barber_name}*
@@ -647,12 +714,20 @@ _ou 0 para cancelar_`,
   const selectedTime = slots[choice - 1];
   const [hours, minutes] = selectedTime.split(":").map(Number);
 
-  // Criar agendamento
-  const startTime = new Date(session.temp_data.selected_date);
-  startTime.setHours(hours, minutes, 0, 0);
+  // Recuperar data selecionada (ParsedDate)
+  const selectedDate: ParsedDate = session.temp_data.selected_date;
+  
+  // Criar agendamento com horário correto de São Paulo convertido para UTC
+  const startTimeUTC = createDateInSaoPaulo(
+    selectedDate.year, 
+    selectedDate.month, 
+    selectedDate.day, 
+    hours, 
+    minutes
+  );
 
-  const endTime = new Date(
-    startTime.getTime() + session.temp_data.service_duration * 60000
+  const endTimeUTC = new Date(
+    startTimeUTC.getTime() + session.temp_data.service_duration * 60000
   );
 
   // Formatar telefone para salvar
@@ -674,8 +749,8 @@ _ou 0 para cancelar_`,
       service_id: session.temp_data.service_id,
       client_phone: clientPhone,
       client_name: clientData?.client_name || null,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
+      start_time: startTimeUTC.toISOString(),
+      end_time: endTimeUTC.toISOString(),
       status: "confirmed",
       original_price: session.temp_data.service_price,
       final_price: session.temp_data.service_price,
@@ -695,7 +770,7 @@ _ou 0 para cancelar_`,
     };
   }
 
-  const dateDisplay = formatDateDisplay(startTime);
+  const dateDisplay = formatDateDisplay(selectedDate);
 
   return {
     nextStep: "confirmed",
