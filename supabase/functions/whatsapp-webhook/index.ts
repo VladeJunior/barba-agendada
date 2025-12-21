@@ -220,6 +220,32 @@ async function getBarbers(supabase: any, shopId: string) {
   return data || [];
 }
 
+// Buscar barbeiros que podem fazer um serviço específico (retro-compatível)
+async function getBarbersForService(supabase: any, shopId: string, serviceId: string) {
+  // Buscar todos os barbeiros ativos
+  const allBarbers = await getBarbers(supabase, shopId);
+  
+  // Buscar vínculos barber_services para este serviço
+  const { data: barberServices, error } = await supabase
+    .from("barber_services")
+    .select("barber_id")
+    .eq("service_id", serviceId);
+  
+  if (error) {
+    console.error("Erro ao buscar barber_services:", error);
+    return allBarbers; // Em caso de erro, retorna todos
+  }
+  
+  // Se não há vínculos configurados, retorna todos (retrocompatibilidade)
+  if (!barberServices || barberServices.length === 0) {
+    return allBarbers;
+  }
+  
+  // Filtrar apenas barbeiros vinculados ao serviço
+  const linkedBarberIds = barberServices.map((bs: any) => bs.barber_id);
+  return allBarbers.filter((barber: any) => linkedBarberIds.includes(barber.id));
+}
+
 // Parse de data (hoje, amanhã, DD/MM) - retorna data em São Paulo
 function parseDate(input: string): { year: number; month: number; day: number } | null {
   const lower = input.toLowerCase().trim();
@@ -698,13 +724,15 @@ _ou 0 para cancelar_`,
   }
 
   const selectedService = services[choice - 1];
-  const barbers = await getBarbers(supabase, shop.id);
+  
+  // Buscar barbeiros que podem fazer este serviço (retrocompatível)
+  const barbers = await getBarbersForService(supabase, shop.id, selectedService.id);
 
   if (barbers.length === 0) {
     return {
       nextStep: "menu",
       tempData: {},
-      response: `Desculpe, não há profissionais disponíveis no momento.
+      response: `Desculpe, não há profissionais disponíveis para este serviço no momento.
 
 1️⃣ Tentar novamente
 2️⃣ Falar com um atendente`,
