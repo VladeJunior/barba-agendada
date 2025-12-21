@@ -812,7 +812,7 @@ Por favor, escolha outra data ou digite *0* para cancelar.`,
   }
 
   const slotList = slots
-    .map((s: string, i: number) => `${i + 1}️⃣ ${s}`)
+    .map((s: string, i: number) => `*[${(i + 1).toString().padStart(2, '0')}]* ${s}`)
     .join("\n");
 
   return {
