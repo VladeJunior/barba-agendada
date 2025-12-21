@@ -590,7 +590,7 @@ Para marcar um novo horário, por favor aguarde o seu atendimento ou cancele um 
     const serviceList = services
       .map(
         (s: any, i: number) =>
-          `${i + 1}️⃣ ${s.name} - ${formatPrice(s.price)} (${s.duration_minutes} min)`
+          `*[${(i + 1).toString().padStart(2, '0')}]* ${s.name} - ${formatPrice(s.price)} (${s.duration_minutes} min)`
       )
       .join("\n");
 
@@ -638,7 +638,7 @@ _ou 0 para cancelar_`,
         minute: "2-digit",
         timeZone: "America/Sao_Paulo",
       });
-      return `${index + 1}️⃣ ${dateStr} às ${timeStr} - ${apt.service.name}`;
+      return `*[${(index + 1).toString().padStart(2, '0')}]* ${dateStr} às ${timeStr} - ${apt.service.name}`;
     });
 
     return {
@@ -711,7 +711,7 @@ _ou 0 para cancelar_`,
   }
 
   const barberList = barbers
-    .map((b: any, i: number) => `${i + 1}️⃣ ${b.name}`)
+    .map((b: any, i: number) => `*[${(i + 1).toString().padStart(2, '0')}]* ${b.name}`)
     .join("\n");
 
   return {
