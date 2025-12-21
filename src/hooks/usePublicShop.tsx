@@ -61,6 +61,38 @@ export function usePublicBarbers(shopId: string | undefined) {
   });
 }
 
+// Buscar barbeiros filtrados por serviço (retro-compatível)
+export function usePublicBarbersForService(shopId: string | undefined, serviceId: string | undefined) {
+  const { data: allBarbers = [], isLoading: barbersLoading } = usePublicBarbers(shopId);
+  
+  const { data: barberServiceIds = [], isLoading: servicesLoading } = useQuery({
+    queryKey: ["public-barber-services", serviceId],
+    queryFn: async () => {
+      if (!serviceId) return [];
+
+      const { data, error } = await supabase
+        .from("barber_services")
+        .select("barber_id")
+        .eq("service_id", serviceId);
+
+      if (error) throw error;
+      return data.map((d) => d.barber_id);
+    },
+    enabled: !!serviceId,
+  });
+
+  // Se não há vínculos configurados para este serviço, retorna todos os barbeiros
+  // (retrocompatibilidade: barbearias que não configuraram serviços por barbeiro)
+  const filteredBarbers = barberServiceIds.length > 0
+    ? allBarbers.filter((barber) => barberServiceIds.includes(barber.id))
+    : allBarbers;
+
+  return {
+    data: filteredBarbers,
+    isLoading: barbersLoading || servicesLoading,
+  };
+}
+
 export function useBarberWorkingHours(barberId: string | undefined) {
   return useQuery({
     queryKey: ["working-hours", barberId],

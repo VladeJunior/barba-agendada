@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { CheckCircle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { usePublicShopBySlug, usePublicServices, usePublicBarbers } from "@/hooks/usePublicShop";
+import { usePublicShopBySlug, usePublicServices, usePublicBarbersForService } from "@/hooks/usePublicShop";
 import { useCreateAppointment } from "@/hooks/useAppointments";
 import { supabase } from "@/integrations/supabase/client";
 import { ServiceSelector } from "@/components/booking/ServiceSelector";
@@ -25,10 +25,6 @@ export default function Booking() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const navigate = useNavigate();
   
-  const { data: shop, isLoading: shopLoading } = usePublicShopBySlug(shopSlug);
-  const { data: services = [] } = usePublicServices(shop?.id);
-  const { data: barbers = [] } = usePublicBarbers(shop?.id);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
@@ -38,6 +34,10 @@ export default function Booking() {
   const [notes, setNotes] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: shop, isLoading: shopLoading } = usePublicShopBySlug(shopSlug);
+  const { data: services = [] } = usePublicServices(shop?.id);
+  const { data: barbers = [] } = usePublicBarbersForService(shop?.id, selectedServiceId || undefined);
 
   const selectedService = useMemo(() => 
     services.find(s => s.id === selectedServiceId), 
@@ -51,6 +51,8 @@ export default function Booking() {
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedServiceId(serviceId);
+    // Resetar barbeiro quando trocar de serviço (pode não estar disponível para o novo serviço)
+    setSelectedBarberId(null);
   };
 
   const handleBarberSelect = (barberId: string) => {

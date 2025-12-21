@@ -12,11 +12,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown, ImageIcon, HelpCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown, ImageIcon, HelpCircle, Scissors } from "lucide-react";
 import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
 import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
 import { PortfolioDialog } from "@/components/dashboard/PortfolioDialog";
+import { BarberServicesDialog } from "@/components/dashboard/BarberServicesDialog";
+import { useBarberServicesCount } from "@/hooks/useBarberServices";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Link as RouterLink } from "react-router-dom";
@@ -38,6 +40,7 @@ export default function Team() {
   const [blockedTimesBarber, setBlockedTimesBarber] = useState<Barber | null>(null);
   const [linkBarber, setLinkBarber] = useState<Barber | null>(null);
   const [portfolioBarber, setPortfolioBarber] = useState<Barber | null>(null);
+  const [servicesBarber, setServicesBarber] = useState<Barber | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   const [formData, setFormData] = useState<BarberInput>({
@@ -325,6 +328,14 @@ export default function Team() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setServicesBarber(barber)}
+                          title="Serviços"
+                        >
+                          <Scissors className="w-4 h-4 text-emerald-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setPortfolioBarber(barber)}
                           title="Gerenciar portfólio"
                         >
@@ -470,6 +481,18 @@ export default function Team() {
           
           <div className="space-y-3 py-4">
             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
+                <Scissors className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Serviços</h4>
+                <p className="text-sm text-muted-foreground">
+                  Defina quais serviços este barbeiro pode realizar. Se não definir, ele poderá fazer todos.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
               <div className="p-2 rounded-lg bg-purple-500/10 shrink-0">
                 <ImageIcon className="w-5 h-5 text-purple-500" />
               </div>
@@ -562,6 +585,15 @@ export default function Team() {
           onOpenChange={(open) => !open && setPortfolioBarber(null)}
           barberId={portfolioBarber.id}
           barberName={portfolioBarber.name}
+        />
+      )}
+
+      {servicesBarber && (
+        <BarberServicesDialog
+          open={!!servicesBarber}
+          onOpenChange={(open) => !open && setServicesBarber(null)}
+          barberId={servicesBarber.id}
+          barberName={servicesBarber.name}
         />
       )}
     </div>
