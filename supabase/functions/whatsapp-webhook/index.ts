@@ -66,6 +66,7 @@ interface Shop {
   name: string;
   wapi_instance_id: string;
   wapi_token: string;
+  whatsapp_bot_enabled: boolean;
 }
 
 // Enviar mensagem via API Railway
@@ -109,7 +110,7 @@ async function getShopByInstanceId(
 ): Promise<Shop | null> {
   const { data, error } = await supabase
     .from("shops")
-    .select("id, name, wapi_instance_id, wapi_token")
+    .select("id, name, wapi_instance_id, wapi_token, whatsapp_bot_enabled")
     .eq("wapi_instance_id", instanceId)
     .single();
 
@@ -1166,6 +1167,15 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Shop não encontrado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verificar se o bot está habilitado para esta barbearia
+    if (!shop.whatsapp_bot_enabled) {
+      console.log(`Bot desativado para shop ${shop.id}`);
+      return new Response(
+        JSON.stringify({ success: true, action: "bot_disabled" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

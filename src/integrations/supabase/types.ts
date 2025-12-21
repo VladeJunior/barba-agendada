@@ -739,6 +739,7 @@ export type Database = {
           updated_at: string
           wapi_instance_id: string | null
           wapi_token: string | null
+          whatsapp_bot_enabled: boolean | null
         }
         Insert: {
           address?: string | null
@@ -768,6 +769,7 @@ export type Database = {
           updated_at?: string
           wapi_instance_id?: string | null
           wapi_token?: string | null
+          whatsapp_bot_enabled?: boolean | null
         }
         Update: {
           address?: string | null
@@ -797,6 +799,7 @@ export type Database = {
           updated_at?: string
           wapi_instance_id?: string | null
           wapi_token?: string | null
+          whatsapp_bot_enabled?: boolean | null
         }
         Relationships: []
       }
