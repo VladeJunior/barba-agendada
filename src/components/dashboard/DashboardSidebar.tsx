@@ -24,6 +24,7 @@ import {
   CreditCard,
   Gift,
   MessageSquare,
+  Wallet,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import logo from "@/assets/infobarber-logo.png";
@@ -35,6 +36,7 @@ const ownerMenuItems = [
   { title: "Equipe", url: "/dashboard/team", icon: Users },
   { title: "Clientes", url: "/dashboard/clients", icon: UserCircle },
   { title: "Relatórios", url: "/dashboard/reports", icon: BarChart3 },
+  { title: "Comissões", url: "/dashboard/commissions", icon: Wallet },
   { title: "Fidelidade", url: "/dashboard/loyalty", icon: Gift },
   { title: "Meu Plano", url: "/dashboard/plans", icon: CreditCard },
   { title: "Suporte", url: "/dashboard/support", icon: MessageSquare },

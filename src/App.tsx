@@ -29,6 +29,7 @@ import Loyalty from "./pages/dashboard/Loyalty";
 import BarberSchedule from "./pages/dashboard/BarberSchedule";
 import BarberCommission from "./pages/dashboard/BarberCommission";
 import BarberDashboardHome from "./pages/dashboard/BarberDashboardHome";
+import CommissionControl from "./pages/dashboard/CommissionControl";
 
 // Admin imports
 import { AdminLayout } from "./components/admin/AdminLayout";
@@ -73,6 +74,7 @@ function App() {
               <Route path="schedule" element={<Schedule />} />
               <Route path="clients" element={<Clients />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="commissions" element={<CommissionControl />} />
               <Route path="plans" element={<Plans />} />
               <Route path="loyalty" element={<Loyalty />} />
               <Route path="support" element={<Support />} />

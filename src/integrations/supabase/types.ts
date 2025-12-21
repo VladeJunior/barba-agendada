@@ -473,6 +473,60 @@ export type Database = {
           },
         ]
       }
+      commission_payments: {
+        Row: {
+          amount_paid: number
+          barber_id: string
+          commission_amount: number
+          commission_rate: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          period_end: string
+          period_start: string
+          shop_id: string
+          status: string
+          total_revenue: number
+          updated_at: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          barber_id: string
+          commission_amount?: number
+          commission_rate: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end: string
+          period_start: string
+          shop_id: string
+          status?: string
+          total_revenue?: number
+          updated_at?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          barber_id?: string
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end?: string
+          period_start?: string
+          shop_id?: string
+          status?: string
+          total_revenue?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       loyalty_coupons: {
         Row: {
           code: string
