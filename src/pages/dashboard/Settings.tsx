@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useShop } from "@/hooks/useShop";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image, Gift } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image, Gift, Bot } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 export default function Settings() {
   const {
@@ -20,6 +22,7 @@ export default function Settings() {
   const {
     user
   } = useAuth();
+  const { plan } = useSubscription();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -31,7 +34,8 @@ export default function Settings() {
     slug: "",
     wapi_instance_id: "",
     wapi_token: "",
-    loyalty_points_expiration_months: 12
+    loyalty_points_expiration_months: 12,
+    whatsapp_bot_enabled: false
   });
   const [copied, setCopied] = useState(false);
   const [slugError, setSlugError] = useState("");
@@ -186,7 +190,8 @@ export default function Settings() {
         slug: shop.slug || "",
         wapi_instance_id: (shop as any).wapi_instance_id || "",
         wapi_token: (shop as any).wapi_token || "",
-        loyalty_points_expiration_months: (shop as any).loyalty_points_expiration_months ?? 12
+        loyalty_points_expiration_months: (shop as any).loyalty_points_expiration_months ?? 12,
+        whatsapp_bot_enabled: (shop as any).whatsapp_bot_enabled ?? false
       });
     }
   }, [shop]);
@@ -314,7 +319,8 @@ export default function Settings() {
         slug: formData.slug,
         wapi_instance_id: formData.wapi_instance_id || null,
         wapi_token: formData.wapi_token || null,
-        loyalty_points_expiration_months: formData.loyalty_points_expiration_months || null
+        loyalty_points_expiration_months: formData.loyalty_points_expiration_months || null,
+        whatsapp_bot_enabled: formData.whatsapp_bot_enabled
       }).eq("id", shop.id);
       if (error) throw error;
       toast.success("Configurações salvas com sucesso!");
@@ -488,6 +494,46 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Bot WhatsApp - Apenas para Profissional e Elite */}
+        {(plan === "profissional" || plan === "elite") && (
+          <Card variant="elevated" className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-gold" />
+                Atendimento Automático via WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Ative o bot para permitir que seus clientes agendem diretamente pelo WhatsApp
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>Ativar Bot de Agendamento</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Quando ativado, o bot responderá automaticamente às mensagens 
+                    recebidas no WhatsApp conectado, permitindo agendamentos 24h.
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.whatsapp_bot_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, whatsapp_bot_enabled: checked })
+                  }
+                />
+              </div>
+              
+              {formData.whatsapp_bot_enabled && !isWapiConfigured && (
+                <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                    ⚠️ Configure e conecte o WhatsApp abaixo para o bot funcionar.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card variant="elevated" className="mt-6" id="whatsapp-connect-section">
           <CardHeader>
