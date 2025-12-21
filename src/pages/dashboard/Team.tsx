@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown, ImageIcon, HelpCircle, Scissors } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Phone, Percent, Clock, CalendarX, Link, CheckCircle, AlertTriangle, Crown, ImageIcon, HelpCircle, Scissors, ChevronRight } from "lucide-react";
 import { WorkingHoursDialog } from "@/components/dashboard/WorkingHoursDialog";
 import { BlockedTimesDialog } from "@/components/dashboard/BlockedTimesDialog";
 import { LinkBarberDialog } from "@/components/dashboard/LinkBarberDialog";
@@ -317,94 +317,119 @@ export default function Team() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{barber.name}</CardTitle>
-                        {!barber.is_active && (
-                          <span className="text-xs text-muted-foreground">(Inativo)</span>
-                        )}
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setServicesBarber(barber)}
-                          title="Serviços"
-                        >
-                          <Scissors className="w-4 h-4 text-emerald-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setPortfolioBarber(barber)}
-                          title="Gerenciar portfólio"
-                        >
-                          <ImageIcon className="w-4 h-4 text-purple-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setWorkingHoursBarber(barber)}
-                          title="Horários de trabalho"
-                        >
-                          <Clock className="w-4 h-4 text-gold" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setBlockedTimesBarber(barber)}
-                          title="Bloqueios e folgas"
-                        >
-                          <CalendarX className="w-4 h-4 text-orange-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setLinkBarber(barber)}
-                          title={barber.user_id ? "Gerenciar acesso" : "Vincular conta"}
-                        >
-                          {barber.user_id ? (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Link className="w-4 h-4 text-blue-500" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditModal(barber)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(barber.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
+                    <CardTitle className="text-lg">{barber.name}</CardTitle>
+                    {!barber.is_active && (
+                      <Badge variant="secondary" className="mt-1">Inativo</Badge>
+                    )}
                   </div>
                 </div>
                 {barber.bio && (
                   <CardDescription className="line-clamp-2 mt-2">{barber.bio}</CardDescription>
                 )}
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 text-sm">
+              <CardContent className="space-y-4">
+                {/* Informações básicas */}
+                <div className="space-y-2 text-sm">
                   {barber.phone && (
-                    <div className="flex items-center gap-1 text-muted-foreground">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Phone className="w-4 h-4" />
                       <span>{barber.phone}</span>
                     </div>
                   )}
                   {barber.commission_rate !== null && barber.commission_rate > 0 && (
-                    <div className="flex items-center gap-1 text-gold">
+                    <div className="flex items-center gap-2 text-gold">
                       <Percent className="w-4 h-4" />
-                      <span>{barber.commission_rate}%</span>
+                      <span>Comissão = {barber.commission_rate}%</span>
                     </div>
                   )}
+                </div>
+
+                {/* Lista de ações */}
+                <div className="border-t pt-4 space-y-1">
+                  <button
+                    onClick={() => setServicesBarber(barber)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Scissors className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm">Serviços</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+
+                  <button
+                    onClick={() => setPortfolioBarber(barber)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ImageIcon className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm">Portfólio</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+
+                  <button
+                    onClick={() => setWorkingHoursBarber(barber)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-4 h-4 text-gold" />
+                      <span className="text-sm">Horários de Trabalho</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+
+                  <button
+                    onClick={() => setBlockedTimesBarber(barber)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <CalendarX className="w-4 h-4 text-orange-500" />
+                      <span className="text-sm">Bloqueios e Folgas</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+
+                  <button
+                    onClick={() => setLinkBarber(barber)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {barber.user_id ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span className="text-sm">Conta Vinculada</span>
+                        </>
+                      ) : (
+                        <>
+                          <Link className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm">Vincular Conta</span>
+                        </>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+
+                {/* Botões de ação */}
+                <div className="border-t pt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => openEditModal(barber)}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setDeleteId(barber.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
