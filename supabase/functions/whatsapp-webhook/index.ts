@@ -445,6 +445,16 @@ function formatDateDisplay(parsedDate: ParsedDate): string {
   return date.toLocaleDateString("pt-BR", options);
 }
 
+// Normalizar telefone: remove caracteres não-numéricos e prefixo 55 do Brasil
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  // Se tem 12 ou 13 dígitos e começa com 55, remove o prefixo do país
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) {
+    return digits.slice(2);
+  }
+  return digits;
+}
+
 // Atualizar ou criar nome do cliente na tabela loyalty_points
 async function updateClientName(
   supabase: any,
@@ -454,7 +464,7 @@ async function updateClientName(
 ): Promise<void> {
   if (!senderName || senderName.trim() === "") return;
 
-  const cleanPhone = phone.replace(/\D/g, "");
+  const cleanPhone = normalizePhone(phone);
   const name = senderName.trim();
 
   try {
@@ -898,8 +908,8 @@ _ou 0 para cancelar_`,
     startTimeUTC.getTime() + session.temp_data.service_duration * 60000
   );
 
-  // Formatar telefone para salvar
-  const clientPhone = session.phone.replace(/\D/g, "");
+  // Formatar telefone para salvar (sem prefixo 55)
+  const clientPhone = normalizePhone(session.phone);
 
   // Buscar nome do cliente no loyalty_points
   const { data: clientData } = await supabase
