@@ -513,7 +513,7 @@ async function getClientAppointments(
   shopId: string,
   phone: string
 ): Promise<any[]> {
-  const cleanPhone = phone.replace(/\D/g, "");
+  const cleanPhone = normalizePhone(phone);
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -544,7 +544,7 @@ async function countActiveAppointments(
   shopId: string,
   phone: string
 ): Promise<number> {
-  const cleanPhone = phone.replace(/\D/g, "");
+  const cleanPhone = normalizePhone(phone);
   const now = new Date().toISOString();
 
   const { count, error } = await supabase
