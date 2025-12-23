@@ -98,12 +98,14 @@ serve(async (req) => {
         results.checked++;
         
         // Determine the expiration date based on status
+        // Priority: current_period_ends_at > trial_ends_at
         let expirationDate: Date | null = null;
         
-        if (shop.subscription_status === "trial" && shop.trial_ends_at) {
-          expirationDate = new Date(shop.trial_ends_at);
-        } else if (shop.current_period_ends_at) {
+        if (shop.current_period_ends_at) {
           expirationDate = new Date(shop.current_period_ends_at);
+        } else if (shop.trial_ends_at) {
+          // Fallback to trial_ends_at if no payment period set yet
+          expirationDate = new Date(shop.trial_ends_at);
         }
 
         if (!expirationDate) {
