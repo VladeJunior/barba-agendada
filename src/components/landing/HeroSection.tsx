@@ -36,9 +36,9 @@ export function HeroSection() {
           <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-foreground mb-6 animate-slide-up" style={{
           animationDelay: "0.1s"
         }}>
-            Gerencie sua{" "}
-            <span className="text-gradient-gold">barbearia</span>
-            {" "}com elegância
+            Pare de perder clientes no{" "}
+            <span className="text-gradient-gold">WhatsApp</span>.{" "}
+            Deixe nossa IA agendar por você.
           </h1>
 
           {/* Subheading */}
