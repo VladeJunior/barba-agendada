@@ -357,10 +357,12 @@ export default function Settings() {
               Personalize a aparência da sua barbearia
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <ImageUpload label="Logo" bucket="shop-logos" path={shop?.id || ""} currentImageUrl={shop?.logo_url} onUploadComplete={handleLogoUpload} aspectRatio="square" maxSizeMB={5} />
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ImageUpload label="Logo" bucket="shop-logos" path={shop?.id || ""} currentImageUrl={shop?.logo_url} onUploadComplete={handleLogoUpload} aspectRatio="square" maxSizeMB={5} />
 
-            <ImageUpload label="Imagem de Capa" bucket="shop-covers" path={shop?.id || ""} currentImageUrl={shop?.cover_url} onUploadComplete={handleCoverUpload} aspectRatio="wide" maxSizeMB={10} />
+              <ImageUpload label="Imagem de Capa" bucket="shop-covers" path={shop?.id || ""} currentImageUrl={shop?.cover_url} onUploadComplete={handleCoverUpload} aspectRatio="wide" maxSizeMB={10} />
+            </div>
           </CardContent>
         </Card>
 
