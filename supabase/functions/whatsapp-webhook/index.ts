@@ -103,6 +103,15 @@ async function sendWhatsAppMessage(
   }
 }
 
+// Converte número para emoji keycap (1 -> 1️⃣, 10 -> 1️⃣0️⃣)
+function numberToEmoji(num: number): string {
+  const emojiMap: { [key: string]: string } = {
+    '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
+    '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
+  };
+  return num.toString().split('').map(d => emojiMap[d] || d).join('');
+}
+
 // Buscar shop pelo instanceId
 async function getShopByInstanceId(
   supabase: any,
@@ -627,7 +636,7 @@ Para marcar um novo horário, por favor aguarde o seu atendimento ou cancele um 
     const serviceList = services
       .map(
         (s: any, i: number) =>
-          `*[${(i + 1).toString().padStart(2, '0')}]* ${s.name} - ${formatPrice(s.price)} (${s.duration_minutes} min)`
+          `${numberToEmoji(i + 1)} ${s.name} - ${formatPrice(s.price)} (${s.duration_minutes} min)`
       )
       .join("\n");
 
@@ -675,7 +684,7 @@ _ou 0 para cancelar_`,
         minute: "2-digit",
         timeZone: "America/Sao_Paulo",
       });
-      return `*[${(index + 1).toString().padStart(2, '0')}]* ${dateStr} às ${timeStr} - ${apt.service.name}`;
+      return `${numberToEmoji(index + 1)} ${dateStr} às ${timeStr} - ${apt.service.name}`;
     });
 
     return {
@@ -750,7 +759,7 @@ _ou 0 para cancelar_`,
   }
 
   const barberList = barbers
-    .map((b: any, i: number) => `*[${(i + 1).toString().padStart(2, '0')}]* ${b.name}`)
+    .map((b: any, i: number) => `${numberToEmoji(i + 1)} ${b.name}`)
     .join("\n");
 
   return {
@@ -851,7 +860,7 @@ Por favor, escolha outra data ou digite *0* para cancelar.`,
   }
 
   const slotList = slots
-    .map((s: string, i: number) => `*[${(i + 1).toString().padStart(2, '0')}]* ${s}`)
+    .map((s: string, i: number) => `${numberToEmoji(i + 1)} ${s}`)
     .join("\n");
 
   return {
