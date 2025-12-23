@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -44,6 +45,21 @@ export function DashboardLayout() {
   
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [sendingResetEmail, setSendingResetEmail] = useState(false);
+
+  // Fetch user profile to get full name
+  const { data: profile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -172,7 +188,7 @@ export function DashboardLayout() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {user?.email?.split("@")[0]}
+                        {profile?.full_name || user?.email?.split("@")[0]}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
@@ -180,10 +196,12 @@ export function DashboardLayout() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configurações
-                  </DropdownMenuItem>
+                  {role === "owner" && (
+                    <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configurações
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
                     <User className="mr-2 h-4 w-4" />
                     Minha Conta
