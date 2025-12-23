@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image, Gift, Bot } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 export default function Settings() {
   const {
     data: shop,
@@ -573,13 +574,35 @@ export default function Settings() {
                   {connectionStatus === "connected" ? "WhatsApp conectado! Você pode testar ou desconectar." : "Conecte seu WhatsApp escaneando o QR Code"}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {connectionStatus !== "connected" ? <Button type="button" variant="outline" className="gap-2" onClick={fetchQrCode} disabled={loadingQr} id="whatsapp-connect-btn">
+                  {connectionStatus !== "connected" ? (
+                    <Button type="button" variant="outline" className="gap-2" onClick={fetchQrCode} disabled={loadingQr} id="whatsapp-connect-btn">
                       {loadingQr ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
                       Conectar WhatsApp
-                    </Button> : <Button type="button" variant="destructive" className="gap-2" onClick={handleDisconnect} disabled={disconnecting}>
-                      {disconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
-                      Desconectar
-                    </Button>}
+                    </Button>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button type="button" variant="destructive" className="gap-2" disabled={disconnecting}>
+                          {disconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
+                          Desconectar
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Desconectar WhatsApp?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja desconectar o WhatsApp? O atendimento automático e os lembretes via WhatsApp serão desativados até você conectar novamente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDisconnect} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Sim, desconectar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                   <Button type="button" variant="outline" className="gap-2" onClick={handleTestWhatsApp} disabled={testingWhatsApp || connectionStatus !== "connected"}>
                     {testingWhatsApp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Testar WhatsApp
