@@ -145,9 +145,9 @@ export default function AdminShopDetail() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="essencial">Essencial - R$ 149/mês</SelectItem>
-                    <SelectItem value="profissional">Profissional - R$ 199/mês</SelectItem>
-                    <SelectItem value="elite">Elite - R$ 299/mês</SelectItem>
+                    <SelectItem value="essencial">Essencial - R$ 99/mês</SelectItem>
+                    <SelectItem value="profissional">Profissional - R$ 149/mês</SelectItem>
+                    <SelectItem value="elite">Elite - R$ 199/mês</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

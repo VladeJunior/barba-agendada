@@ -26,9 +26,9 @@ export default function AdminDashboard() {
         .eq("subscription_status", "active");
 
       const planPrices = {
-        essencial: 149,
-        profissional: 199,
-        elite: 299,
+        essencial: 99,
+        profissional: 149,
+        elite: 199,
       };
 
       const mrr = activeShops?.reduce((sum, shop) => {
