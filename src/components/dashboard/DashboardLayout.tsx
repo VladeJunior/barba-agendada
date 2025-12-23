@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -9,8 +9,19 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { SubscriptionWarningBanner } from "./SubscriptionWarningBanner";
 import { WhatsAppTour } from "./WhatsAppTour";
+import { AccountDialog } from "./AccountDialog";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, User, Key } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/infobarber-logo.jpg";
 
 export function DashboardLayout() {
@@ -30,6 +41,9 @@ export function DashboardLayout() {
   const { connectionStatus, isWapiConfigured } = useWhatsAppStatus();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [sendingResetEmail, setSendingResetEmail] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -72,6 +86,33 @@ export function DashboardLayout() {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) return;
+    
+    setSendingResetEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-password-reset", {
+        body: { email: user.email },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email enviado",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+      });
+    } catch (error) {
+      console.error("Error sending reset email:", error);
+      toast({
+        title: "Erro ao enviar email",
+        description: "Não foi possível enviar o email de recuperação.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingResetEmail(false);
+    }
   };
 
   if (loading || roleLoading || subscriptionLoading) {
@@ -121,13 +162,50 @@ export function DashboardLayout() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <Settings className="w-5 h-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user?.email?.split("@")[0]}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configurações
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
+                    <User className="mr-2 h-4 w-4" />
+                    Minha Conta
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleResetPassword}
+                    disabled={sendingResetEmail}
+                  >
+                    <Key className="mr-2 h-4 w-4" />
+                    {sendingResetEmail ? "Enviando..." : "Alterar Senha"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
+            
+            <AccountDialog 
+              open={accountDialogOpen} 
+              onOpenChange={setAccountDialogOpen} 
+            />
           </header>
 
           {/* Main Content */}
