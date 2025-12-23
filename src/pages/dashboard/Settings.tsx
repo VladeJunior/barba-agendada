@@ -86,8 +86,8 @@ export default function Settings() {
     if (!formData.wapi_instance_id || !formData.wapi_token) return;
     setDisconnecting(true);
     try {
-      const response = await fetch(`https://barber-bot-production.up.railway.app/v1/instance/disconnect?instanceId=${formData.wapi_instance_id}`, {
-        method: "POST",
+      const response = await fetch(`https://barber-bot-production.up.railway.app/v1/instance/reset?instanceId=${formData.wapi_instance_id}`, {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${formData.wapi_token}`
         }
