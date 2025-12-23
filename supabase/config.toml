@@ -1,5 +1,11 @@
 project_id = "pyizjlioocxfjvnosxqy"
 
+[functions.send-password-reset]
+verify_jwt = false
+
+[functions.verify-reset-token]
+verify_jwt = false
+
 [functions.request-wapi-credentials]
 verify_jwt = false
 
