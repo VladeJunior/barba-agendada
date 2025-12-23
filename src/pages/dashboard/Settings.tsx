@@ -181,6 +181,8 @@ export default function Settings() {
   }, [qrDialogOpen, qrCodeImage, connectionStatus, checkInstanceStatus]);
   useEffect(() => {
     if (shop) {
+      // Auto-generate instance ID based on slug: PRO-{SLUG}
+      const autoInstanceId = shop.slug ? `PRO-${shop.slug.toUpperCase()}` : "";
       setFormData({
         name: shop.name || "",
         description: shop.description || "",
@@ -189,7 +191,7 @@ export default function Settings() {
         city: shop.city || "",
         state: shop.state || "",
         slug: shop.slug || "",
-        wapi_instance_id: (shop as any).wapi_instance_id || "",
+        wapi_instance_id: autoInstanceId,
         wapi_token: (shop as any).wapi_token || "",
         loyalty_points_expiration_months: (shop as any).loyalty_points_expiration_months ?? 12,
         whatsapp_bot_enabled: (shop as any).whatsapp_bot_enabled ?? false
@@ -337,7 +339,7 @@ export default function Settings() {
         <div className="animate-pulse text-gold">Carregando...</div>
       </div>;
   }
-  const isWapiConfigured = formData.wapi_instance_id && formData.wapi_token;
+  const isWapiConfigured = !!formData.wapi_instance_id;
   return <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Configurações</h1>
@@ -548,25 +550,14 @@ export default function Settings() {
             <CardDescription>Configure sua conta para enviar mensagens automáticas de confirmação</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="wapi_instance_id">ID da Instância</Label>
-              <Input id="wapi_instance_id" value={formData.wapi_instance_id} onChange={e => setFormData({
-              ...formData,
-              wapi_instance_id: e.target.value
-            })} placeholder="Ex: abc123-instance-id" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="wapi_token">Token da Instância</Label>
-              <div className="relative">
-                <Input id="wapi_token" type={showToken ? "text" : "password"} value={formData.wapi_token} onChange={e => setFormData({
-                ...formData,
-                wapi_token: e.target.value
-              })} placeholder="••••••••••••••••" className="pr-10" />
-                <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowToken(!showToken)}>
-                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
-              </div>
+            <div className="bg-muted/50 border border-border rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-2">ID da Instância</p>
+              <code className="text-sm font-mono bg-background px-3 py-2 rounded block">
+                {formData.wapi_instance_id || "Configure o slug primeiro"}
+              </code>
+              <p className="text-xs text-muted-foreground mt-2">
+                O ID é gerado automaticamente com base no slug da sua barbearia
+              </p>
             </div>
 
             {isWapiConfigured && <div className="bg-muted/50 border border-border rounded-lg p-4">
@@ -613,41 +604,6 @@ export default function Settings() {
                 </div>
               </div>}
 
-            <div className="bg-muted/50 border border-border rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-3">Não possui credenciais? Solicite abaixo e entraremos em contato.</p>
-              <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button type="button" variant="outline" className="gap-2">
-                    <Mail className="w-4 h-4" />
-                    Solicitar ID e Token
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Solicitar Credenciais W-API</DialogTitle>
-                    <DialogDescription>
-                      Enviaremos um email com os dados da sua barbearia para nossa equipe.
-                      Você receberá as credenciais no email cadastrado.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-                      <p><strong>Barbearia:</strong> {formData.name || "Não informado"}</p>
-                      <p><strong>Telefone:</strong> {formData.phone || "Não informado"}</p>
-                      <p><strong>Email:</strong> {user?.email || "Não informado"}</p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="button" onClick={handleRequestCredentials} disabled={requestingCredentials} className="bg-gold hover:bg-gold/90">
-                      {requestingCredentials ? "Enviando..." : "Enviar Solicitação"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
           </CardContent>
         </Card>
 
