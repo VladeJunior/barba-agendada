@@ -62,6 +62,11 @@ export function HeroSection() {
             <Button variant="outline-gold" size="xl" onClick={() => setDemoOpen(true)}>
               Ver Demonstração
             </Button>
+            <Button variant="outline-gold" size="xl" asChild>
+              <a href="https://wa.me/5519998733540?text=Gostaria%20de%20testar%20o%20agendamento%20pelo%20WhatsApp%20InfoBarber" target="_blank" rel="noopener noreferrer">
+                Testar Agendamento por IA
+              </a>
+            </Button>
           </div>
 
           {/* Stats */}
