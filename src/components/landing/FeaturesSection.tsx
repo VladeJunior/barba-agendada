@@ -13,8 +13,8 @@ import {
 const features = [
   {
     icon: Calendar,
-    title: "Agendamento Online",
-    description: "Seus clientes agendam 24h por dia, 7 dias por semana. Chega de mensagens no WhatsApp fora de hora."
+    title: "Agendamento 24 horas",
+    description: "Seus clientes agendam pelo link ou pelo WhatsApp, a qualquer hora. Nossa secretária virtual responde automaticamente. 🤖"
   },
   {
     icon: Users,
@@ -24,7 +24,7 @@ const features = [
   {
     icon: Bell,
     title: "Lembretes Automáticos",
-    description: "Envie lembretes via WhatsApp e reduza as faltas em até 70%. Nunca mais perca um cliente."
+    description: "Lembretes automáticos via WhatsApp antes de cada atendimento. Reduza faltas em até 70%."
   },
   {
     icon: BarChart3,
