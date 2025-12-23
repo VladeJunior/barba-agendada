@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,34 +10,45 @@ import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/infobarber-logo.png";
 
 const ResetPassword = () => {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
+  const [email, setEmail] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we have a valid recovery session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsValidSession(!!session);
+    const validateToken = async () => {
+      if (!token) {
+        setIsValidToken(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke("verify-reset-token", {
+          body: { token }
+        });
+
+        if (error || !data?.valid) {
+          console.log("Token validation failed:", error || data?.error);
+          setIsValidToken(false);
+        } else {
+          setIsValidToken(true);
+          setEmail(data.email || "");
+        }
+      } catch (err) {
+        console.error("Error validating token:", err);
+        setIsValidToken(false);
+      }
     };
     
-    checkSession();
-
-    // Listen for auth state changes (when user clicks recovery link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "PASSWORD_RECOVERY") {
-          setIsValidSession(true);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
+    validateToken();
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,36 +82,43 @@ const ResetPassword = () => {
 
     setIsLoading(true);
     
-    const { error } = await supabase.auth.updateUser({
-      password: password,
-    });
-    
-    setIsLoading(false);
-    
-    if (error) {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-reset-token", {
+        body: { token, newPassword: password }
+      });
+      
+      if (error || !data?.success) {
+        toast({
+          title: "Erro",
+          description: data?.error || "Ocorreu um erro ao redefinir a senha. Tente novamente.",
+          variant: "destructive",
+        });
+      } else {
+        setIsSuccess(true);
+      }
+    } catch (err) {
+      console.error("Error resetting password:", err);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao redefinir a senha. Tente novamente.",
         variant: "destructive",
       });
-    } else {
-      setIsSuccess(true);
-      // Sign out after password reset so user can login with new password
-      await supabase.auth.signOut();
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Loading state while checking session
-  if (isValidSession === null) {
+  // Loading state while checking token
+  if (isValidToken === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-gold">Carregando...</div>
+        <div className="animate-pulse text-gold">Verificando link...</div>
       </div>
     );
   }
 
-  // Invalid or expired session
-  if (!isValidSession) {
+  // Invalid or expired token
+  if (!isValidToken) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="absolute inset-0 opacity-30">
@@ -206,7 +224,7 @@ const ResetPassword = () => {
             </div>
             <CardTitle className="text-2xl">Redefinir senha</CardTitle>
             <CardDescription>
-              Digite sua nova senha abaixo
+              {email ? `Digite a nova senha para ${email}` : "Digite sua nova senha abaixo"}
             </CardDescription>
           </CardHeader>
 
