@@ -61,9 +61,9 @@ serve(async (req) => {
     // Prepare reminder message based on subscription status
     let message = "";
     const planNames = {
-      essencial: "Essencial (R$ 149/mês)",
-      profissional: "Profissional (R$ 199/mês)",
-      elite: "Elite (R$ 299/mês)",
+      essencial: "Essencial (R$ 99/mês)",
+      profissional: "Profissional (R$ 149/mês)",
+      elite: "Elite (R$ 199/mês)",
     };
 
     const planName = planNames[shop.plan as keyof typeof planNames] || shop.plan;

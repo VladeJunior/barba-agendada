@@ -7,7 +7,7 @@ const plans = [
   {
     name: "Essencial",
     description: "Para barbearias iniciando a gestão digital",
-    price: "R$ 149",
+    price: "R$ 99",
     period: "/mês",
     features: [
       "Até 3 barbeiros",
@@ -22,7 +22,7 @@ const plans = [
   {
     name: "Profissional",
     description: "Escale sua operação com dados e automações",
-    price: "R$ 199",
+    price: "R$ 149",
     period: "/mês",
     features: [
       "Até 5 barbeiros",
@@ -40,7 +40,7 @@ const plans = [
   {
     name: "Elite",
     description: "Para redes que precisam de padronização e controle",
-    price: "R$ 299",
+    price: "R$ 199",
     period: "/mês",
     features: [
       "Sem limite de barbeiros",

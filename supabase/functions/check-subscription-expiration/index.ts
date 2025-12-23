@@ -32,11 +32,11 @@ const getMessageTemplate = (type: string, shopName: string, daysRemaining: numbe
 
 const getPlanPrice = (plan: string): number => {
   const prices: Record<string, number> = {
-    essencial: 149,
-    profissional: 199,
-    elite: 299,
+    essencial: 99,
+    profissional: 149,
+    elite: 199,
   };
-  return prices[plan] || 149;
+  return prices[plan] || 99;
 };
 
 const getPlanDisplayName = (plan: string): string => {

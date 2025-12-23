@@ -23,9 +23,9 @@ export default function AdminMetrics() {
 
       // MRR calculation
       const planPrices = {
-        essencial: 149,
-        profissional: 199,
-        elite: 299,
+        essencial: 99,
+        profissional: 149,
+        elite: 199,
       };
 
       const activeShops = shopsResult.data?.filter((s) => s.subscription_status === "active") || [];

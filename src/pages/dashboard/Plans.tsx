@@ -24,7 +24,7 @@ const plans: {
     id: "essencial",
     name: "Essencial",
     description: "Para barbearias iniciando a gestão digital",
-    price: 149,
+    price: 99,
     features: [
       "Até 3 barbeiros",
       "Agenda online",
@@ -37,7 +37,7 @@ const plans: {
     id: "profissional",
     name: "Profissional",
     description: "Escale sua operação com dados e automações",
-    price: 199,
+    price: 149,
     features: [
       "Até 5 barbeiros",
       "Agenda online",
@@ -54,7 +54,7 @@ const plans: {
     id: "elite",
     name: "Elite",
     description: "Para redes que precisam de padronização e controle",
-    price: 299,
+    price: 199,
     features: [
       "Sem limite de barbeiros",
       "Agenda online",

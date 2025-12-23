@@ -23,7 +23,7 @@ const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     hasWhatsAppSupport: false,
     hasExclusiveFeatures: false,
     hasTrial: false,
-    price: 149,
+    price: 99,
   },
   profissional: {
     maxBarbers: 5,
@@ -32,7 +32,7 @@ const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     hasWhatsAppSupport: false,
     hasExclusiveFeatures: false,
     hasTrial: true,
-    price: 199,
+    price: 149,
   },
   elite: {
     maxBarbers: Infinity,
@@ -41,7 +41,7 @@ const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     hasWhatsAppSupport: true,
     hasExclusiveFeatures: true,
     hasTrial: true,
-    price: 299,
+    price: 199,
   },
 };
 
