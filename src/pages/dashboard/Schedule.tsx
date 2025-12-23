@@ -380,14 +380,32 @@ export default function Schedule() {
                     )}
                     
                     {appointment.status === "confirmed" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleStatusChange(appointment.id, "completed")}
-                        className="ml-2"
-                      >
-                        Concluir
-                      </Button>
+                      <div className="flex gap-1 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleStatusChange(appointment.id, "completed")}
+                          className="text-green-500 hover:text-green-400"
+                        >
+                          Concluir
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleStatusChange(appointment.id, "no_show")}
+                          className="text-gray-400 hover:text-gray-300"
+                        >
+                          Não Compareceu
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCancelId(appointment.id)}
+                          title="Cancelar"
+                        >
+                          <X className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
