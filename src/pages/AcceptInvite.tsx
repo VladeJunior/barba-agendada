@@ -64,37 +64,15 @@ export default function AcceptInvite() {
     }
   }, [user, invitation]);
 
-  const acceptInvitation = async (userId: string) => {
+  const acceptInvitation = async (_userId: string) => {
     try {
-      // Update barber with user_id
-      const { error: barberError } = await supabase
-        .from("barbers")
-        .update({ user_id: userId })
-        .eq("id", invitation!.barber_id);
+      // Use edge function with service role to update barber
+      const { data, error } = await supabase.functions.invoke("accept-barber-invite", {
+        body: { token }
+      });
 
-      if (barberError) throw barberError;
-
-      // Create user_roles entry
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: userId,
-          shop_id: invitation!.shop_id,
-          role: "barber",
-        });
-
-      if (roleError && !roleError.message.includes("duplicate")) {
-        throw roleError;
-      }
-
-      // Update invitation status
-      await supabase
-        .from("barber_invitations")
-        .update({ 
-          status: "accepted",
-          accepted_at: new Date().toISOString()
-        })
-        .eq("id", invitation!.id);
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Falha ao aceitar convite");
 
       toast.success("Convite aceito com sucesso!");
       navigate("/dashboard/my-dashboard");
