@@ -359,21 +359,17 @@ export function CalendarGrid({
               })}
 
               {/* Appointments overlay */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="relative h-full pointer-events-auto">
-                  {appointmentsByBarber[barber.id]?.map((appointment) => (
-                    <AppointmentBlock
-                      key={appointment.id}
-                      appointment={appointment}
-                      slotHeight={slotHeight}
-                      startHour={startHour}
-                      onClick={onAppointmentClick}
-                      onDragStart={setDraggingAppointment}
-                      isDragging={draggingAppointment?.id === appointment.id}
-                    />
-                  ))}
-                </div>
-              </div>
+              {appointmentsByBarber[barber.id]?.map((appointment) => (
+                <AppointmentBlock
+                  key={appointment.id}
+                  appointment={appointment}
+                  slotHeight={slotHeight}
+                  startHour={startHour}
+                  onClick={onAppointmentClick}
+                  onDragStart={setDraggingAppointment}
+                  isDragging={draggingAppointment?.id === appointment.id}
+                />
+              ))}
             </div>
           ))}
         </div>
