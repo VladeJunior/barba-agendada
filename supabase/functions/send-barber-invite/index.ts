@@ -15,6 +15,56 @@ interface InviteRequest {
   shop_id: string;
 }
 
+async function sendWhatsAppMessage(
+  phone: string,
+  message: string,
+  instanceId: string,
+  token: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    let formattedPhone = phone.replace(/\D/g, "");
+    if (!formattedPhone.startsWith("55")) {
+      formattedPhone = "55" + formattedPhone;
+    }
+
+    console.log("Sending WhatsApp to:", formattedPhone);
+    console.log("Using instance:", instanceId);
+
+    const response = await fetch(
+      `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${instanceId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          phone: formattedPhone,
+          message: message,
+        }),
+      }
+    );
+
+    console.log("W-API response status:", response.status);
+    
+    const result = await response.json();
+    console.log("W-API response:", result);
+
+    if (!response.ok || result.error) {
+      console.error("W-API error:", result);
+      return { 
+        success: false, 
+        error: `Erro W-API (${response.status}): O WhatsApp pode estar desconectado` 
+      };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error sending WhatsApp:", error);
+    return { success: false, error: "Erro ao conectar com serviço WhatsApp" };
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -73,7 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!shop.wapi_instance_id || !shop.wapi_token) {
-      throw new Error("W-API not configured for this shop");
+      throw new Error("WhatsApp não está configurado para esta barbearia");
     }
 
     // Create invitation
@@ -82,33 +132,24 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         shop_id: barber.shop_id,
         barber_id: barber_id,
-        email: `${barber_phone}@temp.local`, // Temporary email, will be replaced when barber registers
+        email: `${barber_phone.replace(/\D/g, "")}@temp.local`,
       })
       .select()
       .single();
 
     if (inviteError) {
-      throw new Error("Failed to create invitation: " + inviteError.message);
+      console.error("Failed to create invitation:", inviteError);
+      throw new Error("Erro ao criar convite: " + inviteError.message);
     }
 
-    // Build invitation URL using configured APP_URL
+    // Build invitation URL
     const appUrl = Deno.env.get("APP_URL") || "https://comb-plan.lovable.app";
     const inviteUrl = `${appUrl}/aceitar-convite/${invitation.token}`;
     
-    console.log("Using APP_URL:", appUrl);
     console.log("Generated invite URL:", inviteUrl);
 
-    // Format phone number for WhatsApp (remove non-digits)
-    const cleanPhone = barber_phone.replace(/\D/g, "");
-    const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
-
-    console.log("Sending WhatsApp to:", formattedPhone);
-    console.log("W-API instance:", shop.wapi_instance_id);
-
-    // Send WhatsApp message via API
-    const wapiUrl = `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
-    
-    const message = `🎉 *Convite para InfoBarber*
+    // Build WhatsApp message
+    const message = `🎉 *Convite para ${shop_name}*
 
 Olá, ${barber_name}!
 
@@ -120,48 +161,22 @@ Clique no link abaixo para criar sua conta e acessar sua agenda e comissões:
 
 _Este convite expira em 7 dias._`;
 
-    console.log("Calling W-API at:", wapiUrl);
+    // Send WhatsApp message
+    const whatsappResult = await sendWhatsAppMessage(
+      barber_phone,
+      message,
+      shop.wapi_instance_id,
+      shop.wapi_token
+    );
 
-    let whatsappSent = false;
-    let whatsappError = null;
-
-    try {
-      const whatsappResponse = await fetch(wapiUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${shop.wapi_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          message: message,
-        }),
-      });
-
-      console.log("W-API response status:", whatsappResponse.status);
-      const whatsappResult = await whatsappResponse.json();
-      console.log("W-API response:", whatsappResult);
-
-      if (whatsappResponse.ok && !whatsappResult.error) {
-        whatsappSent = true;
-        console.log("WhatsApp invitation sent successfully");
-      } else {
-        console.error("W-API error:", whatsappResult);
-        whatsappError = `WhatsApp indisponível (${whatsappResponse.status})`;
-      }
-    } catch (wapiError: any) {
-      console.error("W-API call failed:", wapiError);
-      whatsappError = "Serviço WhatsApp temporariamente indisponível";
-    }
-
-    // Always return success with invite URL - user can share manually if WhatsApp fails
+    // Always return success with invite URL - frontend can show link to copy manually
     return new Response(
       JSON.stringify({ 
         success: true, 
         invitation_id: invitation.id,
         invite_url: inviteUrl,
-        whatsapp_sent: whatsappSent,
-        whatsapp_error: whatsappError,
+        whatsapp_sent: whatsappResult.success,
+        whatsapp_error: whatsappResult.error || null,
       }),
       {
         status: 200,
