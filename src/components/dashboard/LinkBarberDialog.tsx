@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Link, Unlink, Mail, Loader2, CheckCircle } from "lucide-react";
+import { Link, Unlink, Mail, Loader2, CheckCircle, Copy, AlertTriangle } from "lucide-react";
 
 interface LinkBarberDialogProps {
   open: boolean;
@@ -32,6 +32,8 @@ interface LinkBarberDialogProps {
 export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: LinkBarberDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const { data: shop } = useShop();
 
   const handleSendInvite = async () => {
@@ -48,6 +50,8 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
     }
 
     setIsLoading(true);
+    setWhatsappError(null);
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -69,14 +73,30 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
         throw new Error(response.error.message || "Erro ao enviar convite");
       }
 
+      const result = response.data;
+      setInviteUrl(result.invite_url);
       setInviteSent(true);
-      toast.success("Convite enviado via WhatsApp com sucesso!");
+
+      if (result.whatsapp_sent) {
+        toast.success("Convite enviado via WhatsApp com sucesso!");
+      } else {
+        setWhatsappError(result.whatsapp_error || "WhatsApp indisponível");
+        toast.warning("Convite criado! WhatsApp indisponível, copie o link manualmente.");
+      }
+      
       onSuccess();
     } catch (error: any) {
       console.error("Error sending invite:", error);
       toast.error("Erro ao enviar convite: " + error.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (inviteUrl) {
+      await navigator.clipboard.writeText(inviteUrl);
+      toast.success("Link copiado!");
     }
   };
 
@@ -113,6 +133,8 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
 
   const handleClose = () => {
     setInviteSent(false);
+    setInviteUrl(null);
+    setWhatsappError(null);
     onOpenChange(false);
   };
 
@@ -152,11 +174,44 @@ export function LinkBarberDialog({ open, onOpenChange, barber, onSuccess }: Link
           </div>
         ) : inviteSent ? (
           <div className="py-6 text-center">
-            <Mail className="w-12 h-12 mx-auto mb-4 text-gold" />
-            <h3 className="font-medium text-foreground mb-2">Convite Enviado!</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Uma mensagem foi enviada via WhatsApp para <strong>{barber.phone}</strong> com o link para criar a conta e aceitar o convite.
-            </p>
+            {whatsappError ? (
+              <>
+                <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
+                <h3 className="font-medium text-foreground mb-2">Convite Criado</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {whatsappError}. Copie o link abaixo e envie manualmente para o barbeiro:
+                </p>
+              </>
+            ) : (
+              <>
+                <Mail className="w-12 h-12 mx-auto mb-4 text-gold" />
+                <h3 className="font-medium text-foreground mb-2">Convite Enviado!</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Uma mensagem foi enviada via WhatsApp para <strong>{barber.phone}</strong> com o link para criar a conta e aceitar o convite.
+                </p>
+              </>
+            )}
+            
+            {inviteUrl && (
+              <div className="mb-4">
+                <div className="flex gap-2 items-center bg-muted p-2 rounded-md">
+                  <Input 
+                    value={inviteUrl} 
+                    readOnly 
+                    className="text-xs bg-transparent border-0 focus-visible:ring-0"
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleCopyLink}
+                    className="shrink-0"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <Button onClick={handleClose} className="bg-gold hover:bg-gold/90">
               Fechar
             </Button>

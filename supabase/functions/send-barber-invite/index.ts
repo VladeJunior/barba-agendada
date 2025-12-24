@@ -122,6 +122,9 @@ _Este convite expira em 7 dias._`;
 
     console.log("Calling W-API at:", wapiUrl);
 
+    let whatsappSent = false;
+    let whatsappError = null;
+
     try {
       const whatsappResponse = await fetch(wapiUrl, {
         method: "POST",
@@ -139,19 +142,27 @@ _Este convite expira em 7 dias._`;
       const whatsappResult = await whatsappResponse.json();
       console.log("W-API response:", whatsappResult);
 
-      if (!whatsappResponse.ok) {
+      if (whatsappResponse.ok && !whatsappResult.error) {
+        whatsappSent = true;
+        console.log("WhatsApp invitation sent successfully");
+      } else {
         console.error("W-API error:", whatsappResult);
-        throw new Error(`Failed to send WhatsApp (${whatsappResponse.status}): ${JSON.stringify(whatsappResult)}`);
+        whatsappError = `WhatsApp indisponível (${whatsappResponse.status})`;
       }
-
-      console.log("WhatsApp invitation sent successfully");
     } catch (wapiError: any) {
       console.error("W-API call failed:", wapiError);
-      throw new Error(`WhatsApp service unavailable: ${wapiError.message}`);
+      whatsappError = "Serviço WhatsApp temporariamente indisponível";
     }
 
+    // Always return success with invite URL - user can share manually if WhatsApp fails
     return new Response(
-      JSON.stringify({ success: true, invitation_id: invitation.id }),
+      JSON.stringify({ 
+        success: true, 
+        invitation_id: invitation.id,
+        invite_url: inviteUrl,
+        whatsapp_sent: whatsappSent,
+        whatsapp_error: whatsappError,
+      }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
