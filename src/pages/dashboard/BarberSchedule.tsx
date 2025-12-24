@@ -149,16 +149,6 @@ export default function BarberSchedule() {
                       </Button>
                     )}
                     
-                    {appointment.status === "confirmed" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleStatusChange(appointment.id, "completed")}
-                        className="ml-2"
-                      >
-                        Concluir
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardContent>
