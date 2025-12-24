@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAppointments, useCreateAppointment, useUpdateAppointment, useCancelAppointment, AppointmentInput } from "@/hooks/useAppointments";
+import { useAppointments, useWeekAppointments, useCreateAppointment, useUpdateAppointment, useCancelAppointment, AppointmentInput } from "@/hooks/useAppointments";
 import { useBarbers } from "@/hooks/useBarbers";
 import { useServices } from "@/hooks/useServices";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,32 +12,24 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, CalendarIcon, ChevronLeft, ChevronRight, X, Check, Percent, Clock } from "lucide-react";
-import { format, addMinutes, addDays, subDays, parseISO } from "date-fns";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, CalendarIcon, ChevronLeft, ChevronRight, Users, CalendarDays } from "lucide-react";
+import { format, addMinutes, addDays, subDays, addWeeks, subWeeks, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { CalendarGrid } from "@/components/schedule/CalendarGrid";
+import { WeekGrid } from "@/components/schedule/WeekGrid";
+import { AppointmentDetailsDialog } from "@/components/schedule/AppointmentDetailsDialog";
 
-const statusColors = {
-  scheduled: "bg-blue-500/20 text-blue-400",
-  confirmed: "bg-green-500/20 text-green-400",
-  completed: "bg-gold/20 text-gold",
-  cancelled: "bg-red-500/20 text-red-400",
-  no_show: "bg-gray-500/20 text-gray-400",
-};
-
-const statusLabels = {
-  scheduled: "Agendado",
-  confirmed: "Confirmado",
-  completed: "Concluído",
-  cancelled: "Cancelado",
-  no_show: "Não compareceu",
-};
+type ViewMode = "barbers" | "week";
 
 export default function Schedule() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const { data: appointments = [], isLoading } = useAppointments(selectedDate);
+  const [viewMode, setViewMode] = useState<ViewMode>("barbers");
+  
+  const { data: dayAppointments = [], isLoading: isLoadingDay } = useAppointments(selectedDate);
+  const { data: weekAppointments = [], isLoading: isLoadingWeek } = useWeekAppointments(selectedDate);
+  
   const { data: barbers = [] } = useBarbers();
   const { data: services = [] } = useServices();
   
@@ -59,6 +51,9 @@ export default function Schedule() {
     notes: "",
   });
 
+  const appointments = viewMode === "barbers" ? dayAppointments : weekAppointments;
+  const isLoading = viewMode === "barbers" ? isLoadingDay : isLoadingWeek;
+
   const resetForm = () => {
     setFormData({
       barber_id: "",
@@ -71,17 +66,30 @@ export default function Schedule() {
     });
   };
 
-  const handleSlotClick = (barberId: string, time: string) => {
+  const handleSlotClick = (barberIdOrDate: string | Date, time: string) => {
     const date = new Date(time);
-    setFormData({
-      barber_id: barberId,
-      service_id: "",
-      client_name: "",
-      client_phone: "",
-      date: date,
-      time: format(date, "HH:mm"),
-      notes: "",
-    });
+    
+    if (viewMode === "barbers" && typeof barberIdOrDate === "string") {
+      setFormData({
+        barber_id: barberIdOrDate,
+        service_id: "",
+        client_name: "",
+        client_phone: "",
+        date: date,
+        time: format(date, "HH:mm"),
+        notes: "",
+      });
+    } else {
+      setFormData({
+        barber_id: "",
+        service_id: "",
+        client_name: "",
+        client_phone: "",
+        date: date,
+        time: format(date, "HH:mm"),
+        notes: "",
+      });
+    }
     setIsModalOpen(true);
   };
 
@@ -129,8 +137,25 @@ export default function Schedule() {
     }
   };
 
+  const navigateDate = (direction: "prev" | "next") => {
+    if (viewMode === "barbers") {
+      setSelectedDate(direction === "prev" ? subDays(selectedDate, 1) : addDays(selectedDate, 1));
+    } else {
+      setSelectedDate(direction === "prev" ? subWeeks(selectedDate, 1) : addWeeks(selectedDate, 1));
+    }
+  };
+
   const activeBarbers = barbers.filter(b => b.is_active);
   const activeServices = services.filter(s => s.is_active);
+
+  const getDateLabel = () => {
+    if (viewMode === "barbers") {
+      return format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR });
+    }
+    const start = startOfWeek(selectedDate, { weekStartsOn: 0 });
+    const end = endOfWeek(selectedDate, { weekStartsOn: 0 });
+    return `${format(start, "d MMM", { locale: ptBR })} - ${format(end, "d MMM yyyy", { locale: ptBR })}`;
+  };
 
   if (isLoading) {
     return (
@@ -142,7 +167,7 @@ export default function Schedule() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Agenda</h1>
           <p className="text-muted-foreground">Gerencie os agendamentos da sua barbearia</p>
@@ -161,20 +186,36 @@ export default function Schedule() {
         </Button>
       </div>
 
-      {/* Date Navigation */}
+      {/* Navigation and View Toggle */}
       <Card variant="elevated">
         <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            {/* View Toggle */}
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+              <TabsList className="bg-muted/50">
+                <TabsTrigger value="barbers" className="gap-2 data-[state=active]:bg-gold/20 data-[state=active]:text-gold">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Por Barbeiro</span>
+                </TabsTrigger>
+                <TabsTrigger value="week" className="gap-2 data-[state=active]:bg-gold/20 data-[state=active]:text-gold">
+                  <CalendarDays className="w-4 h-4" />
+                  <span className="hidden sm:inline">Semanal</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Date Navigation */}
             <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => navigateDate("prev")}>
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedDate(new Date())}
                 className={cn(
+                  "hidden sm:flex",
                   format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") && "bg-gold/20 border-gold"
                 )}
               >
@@ -183,9 +224,9 @@ export default function Schedule() {
               
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="min-w-[200px]">
+                  <Button variant="outline" className="min-w-[180px] justify-start">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+                    <span className="truncate">{getDateLabel()}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -197,22 +238,42 @@ export default function Schedule() {
                   />
                 </PopoverContent>
               </Popover>
+              
+              <Button variant="ghost" size="icon" onClick={() => navigateDate("next")}>
+                <ChevronRight className="w-5 h-5" />
+              </Button>
             </div>
-            
-            <Button variant="ghost" size="icon" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-              <ChevronRight className="w-5 h-5" />
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Calendar Grid */}
-      <CalendarGrid
-        selectedDate={selectedDate}
-        barbers={activeBarbers}
-        appointments={appointments}
-        onSlotClick={handleSlotClick}
-        onAppointmentClick={handleAppointmentClick}
+      {/* Calendar View */}
+      {viewMode === "barbers" ? (
+        <CalendarGrid
+          selectedDate={selectedDate}
+          barbers={activeBarbers}
+          appointments={appointments}
+          onSlotClick={handleSlotClick}
+          onAppointmentClick={handleAppointmentClick}
+        />
+      ) : (
+        <WeekGrid
+          selectedDate={selectedDate}
+          appointments={appointments}
+          onSlotClick={(date, time) => handleSlotClick(date, time)}
+          onAppointmentClick={handleAppointmentClick}
+        />
+      )}
+
+      {/* Appointment Details Modal */}
+      <AppointmentDetailsDialog
+        appointment={selectedAppointment}
+        open={!!selectedAppointment}
+        onOpenChange={(open) => !open && setSelectedAppointment(null)}
+        onConfirm={(id) => handleStatusChange(id, "confirmed")}
+        onComplete={(id) => handleStatusChange(id, "completed")}
+        onNoShow={(id) => handleStatusChange(id, "no_show")}
+        onCancel={(id) => setCancelId(id)}
       />
 
       {/* New Appointment Modal */}
@@ -345,145 +406,6 @@ export default function Schedule() {
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Appointment Details Modal */}
-      <Dialog open={!!selectedAppointment} onOpenChange={(open) => !open && setSelectedAppointment(null)}>
-        <DialogContent className="max-w-md">
-          {selectedAppointment && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Detalhes do Agendamento</DialogTitle>
-                <DialogDescription>
-                  {format(parseISO(selectedAppointment.start_time), "EEEE, d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4 py-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Cliente</span>
-                  <span className="font-medium">{selectedAppointment.client_name || "Cliente"}</span>
-                </div>
-                
-                {selectedAppointment.client_phone && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Telefone</span>
-                    <span>{selectedAppointment.client_phone}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Barbeiro</span>
-                  <span>{selectedAppointment.barber?.name}</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Serviço</span>
-                  <span>{selectedAppointment.service?.name}</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Horário</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {format(parseISO(selectedAppointment.start_time), "HH:mm")} - {format(parseISO(selectedAppointment.end_time), "HH:mm")}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Valor</span>
-                  {selectedAppointment.discount_amount && selectedAppointment.discount_amount > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
-                        <Percent className="w-3 h-3 mr-1" />
-                        -R$ {selectedAppointment.discount_amount.toFixed(2)}
-                      </Badge>
-                      <span className="font-medium text-gold">
-                        R$ {selectedAppointment.final_price?.toFixed(2)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="font-medium text-gold">
-                      R$ {selectedAppointment.service?.price?.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <Badge className={cn(statusColors[selectedAppointment.status as keyof typeof statusColors])}>
-                    {statusLabels[selectedAppointment.status as keyof typeof statusLabels]}
-                  </Badge>
-                </div>
-
-                {selectedAppointment.notes && (
-                  <div className="pt-2 border-t border-border">
-                    <span className="text-sm text-muted-foreground">Observações:</span>
-                    <p className="mt-1 text-sm">{selectedAppointment.notes}</p>
-                  </div>
-                )}
-              </div>
-              
-              <DialogFooter className="flex-col gap-2 sm:flex-row">
-                {selectedAppointment.status === "scheduled" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="text-red-500 border-red-500/30 hover:bg-red-500/10"
-                      onClick={() => {
-                        setCancelId(selectedAppointment.id);
-                      }}
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={() => handleStatusChange(selectedAppointment.id, "confirmed")}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Confirmar
-                    </Button>
-                  </>
-                )}
-                
-                {selectedAppointment.status === "confirmed" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="text-red-500 border-red-500/30 hover:bg-red-500/10"
-                      onClick={() => {
-                        setCancelId(selectedAppointment.id);
-                      }}
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancelar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleStatusChange(selectedAppointment.id, "no_show")}
-                    >
-                      Não Compareceu
-                    </Button>
-                    <Button
-                      onClick={() => handleStatusChange(selectedAppointment.id, "completed")}
-                      className="bg-gold hover:bg-gold/90"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Concluir
-                    </Button>
-                  </>
-                )}
-                
-                {(selectedAppointment.status === "completed" || selectedAppointment.status === "no_show") && (
-                  <Button variant="outline" onClick={() => setSelectedAppointment(null)}>
-                    Fechar
-                  </Button>
-                )}
-              </DialogFooter>
-            </>
-          )}
         </DialogContent>
       </Dialog>
 
