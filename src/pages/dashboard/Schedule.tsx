@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppointments, useWeekAppointments, useCreateAppointment, useUpdateAppointment, useCancelAppointment, AppointmentInput } from "@/hooks/useAppointments";
 import { useBarbers } from "@/hooks/useBarbers";
 import { useServices } from "@/hooks/useServices";
+import { useBlockedTimes } from "@/hooks/useBlockedTimes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +15,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, CalendarIcon, ChevronLeft, ChevronRight, Users, CalendarDays } from "lucide-react";
-import { format, addMinutes, addDays, subDays, addWeeks, subWeeks, startOfWeek, endOfWeek } from "date-fns";
+import { format, addMinutes, addDays, subDays, addWeeks, subWeeks, startOfWeek, endOfWeek, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CalendarGrid } from "@/components/schedule/CalendarGrid";
 import { WeekGrid } from "@/components/schedule/WeekGrid";
 import { AppointmentDetailsDialog } from "@/components/schedule/AppointmentDetailsDialog";
+import { toast } from "sonner";
 
 type ViewMode = "barbers" | "week";
 
@@ -29,6 +31,7 @@ export default function Schedule() {
   
   const { data: dayAppointments = [], isLoading: isLoadingDay } = useAppointments(selectedDate);
   const { data: weekAppointments = [], isLoading: isLoadingWeek } = useWeekAppointments(selectedDate);
+  const { data: blockedTimes = [] } = useBlockedTimes();
   
   const { data: barbers = [] } = useBarbers();
   const { data: services = [] } = useServices();
@@ -95,6 +98,30 @@ export default function Schedule() {
 
   const handleAppointmentClick = (appointment: any) => {
     setSelectedAppointment(appointment);
+  };
+
+  const handleAppointmentDrop = async (appointmentId: string, barberId: string, newStartTime: Date) => {
+    // Find the original appointment to get its duration
+    const originalAppointment = appointments.find(a => a.id === appointmentId);
+    if (!originalAppointment) return;
+
+    const originalStart = parseISO(originalAppointment.start_time);
+    const originalEnd = parseISO(originalAppointment.end_time);
+    const duration = differenceInMinutes(originalEnd, originalStart);
+    
+    const newEndTime = addMinutes(newStartTime, duration);
+
+    try {
+      await updateAppointment.mutateAsync({
+        id: appointmentId,
+        barber_id: barberId,
+        start_time: newStartTime.toISOString(),
+        end_time: newEndTime.toISOString(),
+      });
+      toast.success("Agendamento reagendado com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao reagendar agendamento");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,8 +280,10 @@ export default function Schedule() {
           selectedDate={selectedDate}
           barbers={activeBarbers}
           appointments={appointments}
+          blockedTimes={blockedTimes}
           onSlotClick={handleSlotClick}
           onAppointmentClick={handleAppointmentClick}
+          onAppointmentDrop={handleAppointmentDrop}
         />
       ) : (
         <WeekGrid
