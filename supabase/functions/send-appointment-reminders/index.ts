@@ -17,10 +17,15 @@ interface Appointment {
   service: { name: string } | null;
   shop: {
     name: string;
-    wapi_instance_id: string | null;
+    slug: string | null;
     wapi_token: string | null;
   } | null;
 }
+
+// Generate instance ID from slug: PRO-{SLUG}
+const generateInstanceId = (slug: string): string => {
+  return `PRO-${slug.toUpperCase()}`;
+};
 
 async function sendWhatsAppMessage(
   phone: string,
@@ -33,6 +38,8 @@ async function sendWhatsAppMessage(
     if (!formattedPhone.startsWith("55")) {
       formattedPhone = "55" + formattedPhone;
     }
+
+    console.log("Sending WhatsApp to:", formattedPhone, "via instance:", instanceId);
 
     const response = await fetch(
       `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${instanceId}`,
@@ -49,8 +56,10 @@ async function sendWhatsAppMessage(
       }
     );
 
-    if (!response.ok) {
-      console.error("W-API error:", await response.text());
+    const result = await response.json();
+    
+    if (!response.ok || result.error) {
+      console.error("W-API error:", result);
       return false;
     }
 
@@ -62,7 +71,7 @@ async function sendWhatsAppMessage(
 }
 
 function formatTimeRemaining(minutesUntil: number): string {
-  if (minutesUntil >= 1380) { // ~23h
+  if (minutesUntil >= 1380) {
     return "amanhã";
   } else if (minutesUntil >= 90) {
     const hours = Math.round(minutesUntil / 60);
@@ -127,24 +136,18 @@ function determineReminderType(
 ): "24h" | "1h" | "30min" | null {
   const hoursFromCreationToAppointment = minutesFromCreationToAppointment / 60;
 
-  // 24h reminder: 23h-25h before appointment (janela de 2h)
-  // Only if created more than 24h before
   if (minutesUntilAppointment >= 1380 && minutesUntilAppointment <= 1500) {
     if (hoursFromCreationToAppointment > 24) {
       return "24h";
     }
   }
 
-  // 1h reminder: 55-65min before appointment (janela de 10min)
-  // For appointments created 1h-24h in advance
   if (minutesUntilAppointment >= 55 && minutesUntilAppointment <= 65) {
     if (hoursFromCreationToAppointment <= 24 && hoursFromCreationToAppointment > 1) {
       return "1h";
     }
   }
 
-  // 30min reminder: 25-35min before appointment (janela de 10min)
-  // For appointments created less than 1h in advance
   if (minutesUntilAppointment >= 25 && minutesUntilAppointment <= 35) {
     if (hoursFromCreationToAppointment <= 1) {
       return "30min";
@@ -169,7 +172,7 @@ serve(async (req) => {
 
     console.log(`Checking for reminders at ${now.toISOString()}`);
 
-    // Fetch appointments that need reminders (from 5 min to 25h ahead)
+    // Fetch appointments with shop slug and token
     const { data: appointments, error: appointmentsError } = await supabase
       .from("appointments")
       .select(`
@@ -181,7 +184,7 @@ serve(async (req) => {
         created_at,
         barber:barbers(name),
         service:services(name),
-        shop:shops(name, wapi_instance_id, wapi_token)
+        shop:shops(name, slug, wapi_token)
       `)
       .in("status", ["scheduled", "confirmed"])
       .gte("start_time", now.toISOString())
@@ -208,9 +211,9 @@ serve(async (req) => {
       const appointment = apt as unknown as Appointment;
       results.processed++;
 
-      // Skip if shop doesn't have WhatsApp configured
-      if (!appointment.shop?.wapi_instance_id || !appointment.shop?.wapi_token) {
-        console.log(`Skipping ${appointment.id}: No WhatsApp configured`);
+      // Skip if shop doesn't have slug or token configured
+      if (!appointment.shop?.slug || !appointment.shop?.wapi_token) {
+        console.log(`Skipping ${appointment.id}: No WhatsApp configured (missing slug or token)`);
         results.skipped++;
         continue;
       }
@@ -221,12 +224,14 @@ serve(async (req) => {
         continue;
       }
 
+      // Generate instance ID from slug
+      const instanceId = generateInstanceId(appointment.shop.slug);
+
       const appointmentTime = new Date(appointment.start_time);
       const createdAt = new Date(appointment.created_at);
       const minutesUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60);
       const minutesFromCreationToAppointment = (appointmentTime.getTime() - createdAt.getTime()) / (1000 * 60);
 
-      // Determine which reminder to send
       const reminderType = determineReminderType(
         minutesUntilAppointment,
         minutesFromCreationToAppointment
@@ -254,7 +259,7 @@ serve(async (req) => {
       const sent = await sendWhatsAppMessage(
         appointment.client_phone,
         message,
-        appointment.shop.wapi_instance_id,
+        instanceId,
         appointment.shop.wapi_token
       );
 
@@ -272,7 +277,7 @@ serve(async (req) => {
       }
 
       if (sent) {
-        console.log(`Sent ${reminderType} reminder for appointment ${appointment.id}`);
+        console.log(`Sent ${reminderType} reminder for appointment ${appointment.id} via instance ${instanceId}`);
         if (reminderType === "24h") results.sent24h++;
         else if (reminderType === "1h") results.sent1h++;
         else results.sent30min++;

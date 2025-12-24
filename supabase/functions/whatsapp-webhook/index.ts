@@ -64,6 +64,7 @@ function isSessionTimedOut(session: Session): boolean {
 interface Shop {
   id: string;
   name: string;
+  slug?: string;
   wapi_instance_id: string;
   wapi_token: string;
   whatsapp_bot_enabled: boolean;
@@ -112,14 +113,43 @@ function numberToEmoji(num: number): string {
   return num.toString().split('').map(d => emojiMap[d] || d).join('');
 }
 
-// Buscar shop pelo instanceId
+// Extract slug from instanceId (PRO-SLUG -> slug)
+function extractSlugFromInstanceId(instanceId: string): string | null {
+  if (instanceId.startsWith("PRO-")) {
+    return instanceId.substring(4).toLowerCase();
+  }
+  return null;
+}
+
+// Buscar shop pelo instanceId (converte para slug primeiro)
 async function getShopByInstanceId(
   supabase: any,
   instanceId: string
 ): Promise<Shop | null> {
+  // Extract slug from instance ID pattern PRO-{SLUG}
+  const slug = extractSlugFromInstanceId(instanceId);
+  
+  if (slug) {
+    // New pattern: search by slug
+    const { data, error } = await supabase
+      .from("shops")
+      .select("id, name, slug, wapi_token, whatsapp_bot_enabled")
+      .eq("slug", slug)
+      .single();
+
+    if (!error && data) {
+      console.log(`Found shop by slug ${slug}:`, data.name);
+      return {
+        ...data,
+        wapi_instance_id: instanceId, // Use the received instanceId
+      };
+    }
+  }
+  
+  // Fallback: try old pattern (stored wapi_instance_id)
   const { data, error } = await supabase
     .from("shops")
-    .select("id, name, wapi_instance_id, wapi_token, whatsapp_bot_enabled")
+    .select("id, name, slug, wapi_instance_id, wapi_token, whatsapp_bot_enabled")
     .eq("wapi_instance_id", instanceId)
     .single();
 

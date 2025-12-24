@@ -181,6 +181,9 @@ export default function Settings() {
   }, [qrDialogOpen, qrCodeImage, connectionStatus, checkInstanceStatus]);
   useEffect(() => {
     if (shop) {
+      // Generate instance ID based on slug: PRO-{SLUG}
+      const generatedInstanceId = shop.slug ? `PRO-${shop.slug.toUpperCase()}` : "";
+      
       setFormData({
         name: shop.name || "",
         description: shop.description || "",
@@ -189,7 +192,7 @@ export default function Settings() {
         city: shop.city || "",
         state: shop.state || "",
         slug: shop.slug || "",
-        wapi_instance_id: (shop as any).wapi_instance_id || "",
+        wapi_instance_id: generatedInstanceId,
         wapi_token: (shop as any).wapi_token || "",
         loyalty_points_expiration_months: (shop as any).loyalty_points_expiration_months ?? 12,
         whatsapp_bot_enabled: (shop as any).whatsapp_bot_enabled ?? false

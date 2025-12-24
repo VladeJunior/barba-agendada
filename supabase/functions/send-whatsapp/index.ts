@@ -11,7 +11,7 @@ interface WhatsAppRequest {
   shopId: string;
   shopSlug?: string;
   phone: string;
-  message?: string; // Custom message for test
+  message?: string;
   clientName?: string;
   serviceName?: string;
   servicePrice?: number;
@@ -22,8 +22,12 @@ interface WhatsAppRequest {
   shopName?: string;
 }
 
+// Generate instance ID from slug: PRO-{SLUG}
+const generateInstanceId = (slug: string): string => {
+  return `PRO-${slug.toUpperCase()}`;
+};
+
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -32,7 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
     const data: WhatsAppRequest = await req.json();
     const { shopId, shopSlug, phone, message: customMessage, clientName, serviceName, servicePrice, originalPrice, discountAmount, barberName, dateTime, shopName } = data;
 
-    console.log("Received WhatsApp request:", { shopId, shopSlug, phone, clientName, hasCustomMessage: !!customMessage, hasDiscount: !!discountAmount });
+    console.log("Received WhatsApp request:", { shopId, shopSlug, phone, clientName, hasCustomMessage: !!customMessage });
 
     if (!shopId || !phone) {
       console.log("Missing required fields, skipping WhatsApp");
@@ -42,15 +46,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create Supabase client with service role to access shop credentials
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch W-API credentials for this shop
+    // Fetch shop slug and token
     const { data: shop, error: shopError } = await supabase
       .from("shops")
-      .select("wapi_instance_id, wapi_token")
+      .select("slug, wapi_token")
       .eq("id", shopId)
       .single();
 
@@ -62,22 +65,24 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // If W-API credentials not configured, skip silently
-    if (!shop.wapi_instance_id || !shop.wapi_token) {
-      console.log("W-API credentials not configured for shop:", shopId);
+    if (!shop.slug || !shop.wapi_token) {
+      console.log("Shop missing slug or token:", shopId);
       return new Response(
         JSON.stringify({ success: false, reason: "W-API not configured" }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Build WhatsApp message (use custom message or build appointment message)
+    // Generate instance ID from slug
+    const instanceId = generateInstanceId(shop.slug);
+    console.log("Using generated instance ID:", instanceId);
+
+    // Build WhatsApp message
     let message: string;
     
     if (customMessage) {
       message = customMessage;
     } else {
-      // Format date/time for appointment message
       const appointmentDate = new Date(dateTime!);
       const formattedDate = appointmentDate.toLocaleDateString("pt-BR", {
         weekday: "long",
@@ -95,7 +100,6 @@ const handler = async (req: Request): Promise<Response> => {
         currency: "BRL",
       }).format(servicePrice || 0);
 
-      // Format discount info if applicable
       let priceInfo = `💰 *Valor:* ${formattedPrice}`;
       if (discountAmount && discountAmount > 0 && originalPrice) {
         const formattedOriginalPrice = new Intl.NumberFormat("pt-BR", {
@@ -110,9 +114,8 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const appUrl = Deno.env.get("APP_URL") || "https://comb-plan.lovable.app";
-      const appointmentsUrl = shopSlug 
-        ? `${appUrl}/agendar/${shopSlug}/meus-agendamentos`
-        : `${appUrl}/agendar/${shopSlug}/meus-agendamentos`;
+      const slug = shopSlug || shop.slug;
+      const appointmentsUrl = `${appUrl}/agendar/${slug}/meus-agendamentos`;
 
       message = `✅ *Agendamento Confirmado!*
 
@@ -132,16 +135,17 @@ ${appointmentsUrl}
 Até lá! 💈`;
     }
 
-    // Format phone number (ensure it has country code)
+    // Format phone number
     let formattedPhone = phone.replace(/\D/g, "");
     if (!formattedPhone.startsWith("55")) {
       formattedPhone = "55" + formattedPhone;
     }
 
     // Send message via WhatsApp API
-    const wapiUrl = `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${shop.wapi_instance_id}`;
+    const wapiUrl = `https://barber-bot-production.up.railway.app/v1/message/send-text?instanceId=${instanceId}`;
     
     console.log("Sending WhatsApp via W-API to:", formattedPhone);
+    console.log("Using instance:", instanceId);
 
     const wapiResponse = await fetch(wapiUrl, {
       method: "POST",
@@ -158,7 +162,7 @@ Até lá! 💈`;
     const wapiResult = await wapiResponse.json();
     console.log("W-API response:", wapiResult);
 
-    if (!wapiResponse.ok) {
+    if (!wapiResponse.ok || wapiResult.error) {
       console.error("W-API error:", wapiResult);
       return new Response(
         JSON.stringify({ success: false, reason: "W-API error", details: wapiResult }),
