@@ -15,6 +15,11 @@ interface InviteRequest {
   shop_id: string;
 }
 
+// Generate instance ID from slug: PRO-{SLUG}
+const generateInstanceId = (slug: string): string => {
+  return `PRO-${slug.toUpperCase()}`;
+};
+
 async function sendWhatsAppMessage(
   phone: string,
   message: string,
@@ -80,7 +85,6 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("No authorization header");
     }
 
-    // Verify the user making the request
     const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace("Bearer ", "")
     );
@@ -91,7 +95,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { barber_id, barber_name, barber_phone, shop_name, shop_id }: InviteRequest = await req.json();
 
-    // Validate input
     if (!barber_id || !barber_name || !barber_phone || !shop_name || !shop_id) {
       throw new Error("Missing required fields");
     }
@@ -111,10 +114,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Not authorized to invite for this barber");
     }
 
-    // Get shop W-API credentials
+    // Get shop slug and token
     const { data: shop, error: shopError } = await supabase
       .from("shops")
-      .select("wapi_instance_id, wapi_token")
+      .select("slug, wapi_token")
       .eq("id", shop_id)
       .single();
 
@@ -122,9 +125,13 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Shop not found");
     }
 
-    if (!shop.wapi_instance_id || !shop.wapi_token) {
+    if (!shop.slug || !shop.wapi_token) {
       throw new Error("WhatsApp não está configurado para esta barbearia");
     }
+
+    // Generate instance ID from slug
+    const instanceId = generateInstanceId(shop.slug);
+    console.log("Using generated instance ID:", instanceId);
 
     // Create invitation
     const { data: invitation, error: inviteError } = await supabase
@@ -165,11 +172,10 @@ _Este convite expira em 7 dias._`;
     const whatsappResult = await sendWhatsAppMessage(
       barber_phone,
       message,
-      shop.wapi_instance_id,
+      instanceId,
       shop.wapi_token
     );
 
-    // Always return success with invite URL - frontend can show link to copy manually
     return new Response(
       JSON.stringify({ 
         success: true, 
