@@ -1,9 +1,11 @@
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { GripVertical } from "lucide-react";
 
 interface Appointment {
   id: string;
+  barber_id: string;
   client_name: string | null;
   client_phone: string | null;
   start_time: string;
@@ -12,6 +14,7 @@ interface Appointment {
   service?: {
     name: string;
     price: number;
+    duration_minutes?: number;
   } | null;
 }
 
@@ -20,6 +23,8 @@ interface AppointmentBlockProps {
   slotHeight: number;
   startHour: number;
   onClick?: (appointment: Appointment) => void;
+  onDragStart?: (appointment: Appointment) => void;
+  isDragging?: boolean;
 }
 
 const statusColors = {
@@ -38,7 +43,14 @@ const statusLabels = {
   no_show: "Não compareceu",
 };
 
-export function AppointmentBlock({ appointment, slotHeight, startHour, onClick }: AppointmentBlockProps) {
+export function AppointmentBlock({ 
+  appointment, 
+  slotHeight, 
+  startHour, 
+  onClick,
+  onDragStart,
+  isDragging 
+}: AppointmentBlockProps) {
   const start = parseISO(appointment.start_time);
   const end = parseISO(appointment.end_time);
   
@@ -49,14 +61,30 @@ export function AppointmentBlock({ appointment, slotHeight, startHour, onClick }
   const duration = differenceInMinutes(end, start);
   const height = (duration / 30) * slotHeight;
 
+  const canDrag = appointment.status === "scheduled" || appointment.status === "confirmed";
+
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!canDrag) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData("application/json", JSON.stringify(appointment));
+    e.dataTransfer.effectAllowed = "move";
+    onDragStart?.(appointment);
+  };
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div
+            draggable={canDrag}
+            onDragStart={handleDragStart}
             className={cn(
-              "absolute left-1 right-1 rounded-md border-l-4 px-2 py-1 cursor-pointer transition-colors overflow-hidden",
-              statusColors[appointment.status]
+              "absolute left-1 right-1 rounded-md border-l-4 px-2 py-1 cursor-pointer transition-all overflow-hidden group",
+              statusColors[appointment.status],
+              isDragging && "opacity-50 scale-95",
+              canDrag && "cursor-grab active:cursor-grabbing"
             )}
             style={{
               top: `${topOffset}px`,
@@ -65,14 +93,21 @@ export function AppointmentBlock({ appointment, slotHeight, startHour, onClick }
             }}
             onClick={() => onClick?.(appointment)}
           >
-            <p className="text-xs font-medium text-white truncate">
-              {format(start, "HH:mm")} - {appointment.client_name || "Cliente"}
-            </p>
-            {height > slotHeight && (
-              <p className="text-xs text-white/80 truncate">
-                {appointment.service?.name}
-              </p>
-            )}
+            <div className="flex items-start gap-1">
+              {canDrag && (
+                <GripVertical className="w-3 h-3 text-white/60 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-white truncate">
+                  {format(start, "HH:mm")} - {appointment.client_name || "Cliente"}
+                </p>
+                {height > slotHeight && (
+                  <p className="text-xs text-white/80 truncate">
+                    {appointment.service?.name}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-xs">
@@ -91,6 +126,9 @@ export function AppointmentBlock({ appointment, slotHeight, startHour, onClick }
               <p className="text-xs text-muted-foreground">{appointment.client_phone}</p>
             )}
             <p className="text-xs">Status: {statusLabels[appointment.status]}</p>
+            {canDrag && (
+              <p className="text-xs text-muted-foreground italic">Arraste para reagendar</p>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>
