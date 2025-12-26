@@ -127,6 +127,42 @@ function formatAgendaMessage(
   return message;
 }
 
+// Helper: Calculate today's date boundaries in São Paulo timezone
+// São Paulo is UTC-3 (no DST since 2019)
+function getTodayInSaoPaulo(): { dateStr: string; startISO: string; endISO: string; displayDate: Date } {
+  const SAO_PAULO_OFFSET_HOURS = -3;
+  const now = new Date();
+  
+  // Calculate current time in São Paulo by applying offset to UTC
+  const utcMs = now.getTime();
+  const saoPauloMs = utcMs + (SAO_PAULO_OFFSET_HOURS * 60 * 60 * 1000);
+  const saoPauloDate = new Date(saoPauloMs);
+  
+  // Extract year, month, day from the São Paulo "view" of time
+  const year = saoPauloDate.getUTCFullYear();
+  const month = saoPauloDate.getUTCMonth();
+  const day = saoPauloDate.getUTCDate();
+  
+  // Format as YYYY-MM-DD for logging
+  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  
+  // Calculate UTC boundaries for this São Paulo day
+  // 00:00 São Paulo = 03:00 UTC same day
+  // 23:59:59 São Paulo = 02:59:59 UTC next day
+  const startUTC = new Date(Date.UTC(year, month, day, 3, 0, 0, 0));
+  const endUTC = new Date(Date.UTC(year, month, day + 1, 2, 59, 59, 999));
+  
+  // Create a display date that represents the São Paulo day for formatting
+  const displayDate = new Date(Date.UTC(year, month, day, 12, 0, 0, 0));
+  
+  return {
+    dateStr,
+    startISO: startUTC.toISOString(),
+    endISO: endUTC.toISOString(),
+    displayDate
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -138,16 +174,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
-    console.log(`Starting daily agenda send at ${now.toISOString()}`);
-
-    // Get today's date range in São Paulo timezone
-    const todayStart = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
-    );
-    todayStart.setHours(0, 0, 0, 0);
-
-    const todayEnd = new Date(todayStart);
-    todayEnd.setHours(23, 59, 59, 999);
+    const { dateStr, startISO, endISO, displayDate } = getTodayInSaoPaulo();
+    
+    console.log(`Starting daily agenda send:`);
+    console.log(`  UTC now: ${now.toISOString()}`);
+    console.log(`  São Paulo date: ${dateStr}`);
+    console.log(`  Query range: ${startISO} to ${endISO}`);
 
     // Fetch shops with Profissional or Elite plans that have W-API configured
     const { data: shops, error: shopsError } = await supabase
@@ -212,8 +244,8 @@ serve(async (req) => {
           `)
           .eq("barber_id", barber.id)
           .eq("shop_id", shop.id)
-          .gte("start_time", todayStart.toISOString())
-          .lte("start_time", todayEnd.toISOString())
+          .gte("start_time", startISO)
+          .lte("start_time", endISO)
           .in("status", ["scheduled", "confirmed"])
           .order("start_time", { ascending: true });
 
@@ -239,7 +271,7 @@ serve(async (req) => {
           barber.name,
           shop.name,
           formattedAppointments,
-          todayStart
+          displayDate
         );
 
         const sent = await sendWhatsAppMessage(
