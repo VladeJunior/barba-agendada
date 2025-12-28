@@ -129,7 +129,13 @@ function formatAgendaMessage(
 
 // Helper: Calculate today's date boundaries in São Paulo timezone
 // São Paulo is UTC-3 (no DST since 2019)
-function getTodayInSaoPaulo(): { dateStr: string; startISO: string; endISO: string; displayDate: Date } {
+function getTodayInSaoPaulo(): { 
+  dateStr: string; 
+  startISO: string; 
+  endISO: string; 
+  displayDate: Date;
+  dayOfWeek: number; // 0=Domingo, 1=Segunda, ..., 6=Sábado
+} {
   const SAO_PAULO_OFFSET_HOURS = -3;
   const now = new Date();
   
@@ -142,6 +148,7 @@ function getTodayInSaoPaulo(): { dateStr: string; startISO: string; endISO: stri
   const year = saoPauloDate.getUTCFullYear();
   const month = saoPauloDate.getUTCMonth();
   const day = saoPauloDate.getUTCDate();
+  const dayOfWeek = saoPauloDate.getUTCDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
   
   // Format as YYYY-MM-DD for logging
   const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -159,7 +166,8 @@ function getTodayInSaoPaulo(): { dateStr: string; startISO: string; endISO: stri
     dateStr,
     startISO: startUTC.toISOString(),
     endISO: endUTC.toISOString(),
-    displayDate
+    displayDate,
+    dayOfWeek
   };
 }
 
@@ -174,11 +182,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
-    const { dateStr, startISO, endISO, displayDate } = getTodayInSaoPaulo();
+    const { dateStr, startISO, endISO, displayDate, dayOfWeek } = getTodayInSaoPaulo();
     
+    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     console.log(`Starting daily agenda send:`);
     console.log(`  UTC now: ${now.toISOString()}`);
-    console.log(`  São Paulo date: ${dateStr}`);
+    console.log(`  São Paulo date: ${dateStr} (${dayNames[dayOfWeek]}, day_of_week=${dayOfWeek})`);
     console.log(`  Query range: ${startISO} to ${endISO}`);
 
     // Fetch shops with Profissional or Elite plans that have W-API configured
@@ -201,6 +210,7 @@ serve(async (req) => {
       shopsProcessed: 0,
       barbersSent: 0,
       barbersSkipped: 0,
+      barbersNotWorkingToday: 0,
       errors: 0,
     };
 
@@ -227,6 +237,27 @@ serve(async (req) => {
       for (const barber of barbers || []) {
         if (!barber.phone) {
           results.barbersSkipped++;
+          continue;
+        }
+
+        // Check if barber works on this day of the week
+        const { data: workingToday, error: workingError } = await supabase
+          .from("working_hours")
+          .select("id")
+          .eq("barber_id", barber.id)
+          .eq("day_of_week", dayOfWeek)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (workingError) {
+          console.error(`Error checking working hours for barber ${barber.id}:`, workingError);
+          results.errors++;
+          continue;
+        }
+
+        if (!workingToday) {
+          console.log(`Skipping ${barber.name} - not working on ${dayNames[dayOfWeek]} (day_of_week=${dayOfWeek})`);
+          results.barbersNotWorkingToday++;
           continue;
         }
 
