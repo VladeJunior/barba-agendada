@@ -47,3 +47,12 @@ verify_jwt = false
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.create-abacatepay-billing]
+verify_jwt = true
+
+[functions.abacatepay-webhook]
+verify_jwt = false
+
+[functions.check-abacatepay-status]
+verify_jwt = true

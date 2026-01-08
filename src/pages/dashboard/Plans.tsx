@@ -93,14 +93,14 @@ export default function Plans() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Handle payment return from Mercado Pago
+  // Handle payment return from AbacatePay
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     
     const checkPaymentAndUpdate = async () => {
       try {
         // Call edge function to verify payment status
-        const { data, error } = await supabase.functions.invoke("check-payment-status");
+        const { data, error } = await supabase.functions.invoke("check-abacatepay-status");
         
         if (!error && data?.updated) {
           toast.success("Pagamento confirmado! Seu plano foi ativado.");
