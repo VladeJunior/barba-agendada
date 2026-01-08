@@ -50,14 +50,42 @@ serve(async (req) => {
       });
     }
 
-    // Get user profile for name
+    // Get user profile for name + phone
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, phone")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    const customerName = profile?.full_name || shop.name || user.email?.split("@")[0] || "Cliente";
+    const customerName =
+      profile?.full_name || shop.name || user.email?.split("@")[0] || "Cliente";
+
+    const normalizeCellphone = (value: string | null | undefined) => {
+      if (!value) return null;
+      const digits = value.replace(/\D/g, "");
+      if (!digits) return null;
+
+      // Assume Brazilian numbers when country code isn't provided.
+      const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+
+      // BR: 55 + DDD(2) + phone(8-9) => 12-13 digits
+      if (withCountry.length < 12 || withCountry.length > 13) return null;
+
+      return `+${withCountry}`;
+    };
+
+    const customerCellphone = normalizeCellphone(profile?.phone ?? shop.phone);
+
+    if (!customerCellphone) {
+      return new Response(
+        JSON.stringify({
+          error: "Telefone obrigatório",
+          details:
+            "Para gerar a cobrança, adicione um celular no seu perfil (ou telefone da barbearia) com DDD.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Plan prices (in BRL)
     const planPrices: Record<string, { name: string; price: number }> = {
@@ -77,10 +105,13 @@ serve(async (req) => {
     const ABACATEPAY_API_KEY = Deno.env.get("ABACATEPAY_API_KEY");
     if (!ABACATEPAY_API_KEY) {
       console.error("ABACATEPAY_API_KEY not configured");
-      return new Response(JSON.stringify({ error: "Configuração de pagamento não encontrada" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Configuração de pagamento não encontrada" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const origin = req.headers.get("origin") || "https://infobarber.com.br";
@@ -102,6 +133,7 @@ serve(async (req) => {
       customer: {
         name: customerName,
         email: user.email,
+        cellphone: customerCellphone,
       },
       metadata: {
         shop_id: shop.id,
@@ -127,10 +159,13 @@ serve(async (req) => {
 
     if (!abacateResponse.ok) {
       console.error("AbacatePay error:", abacateResponse.status, responseText);
-      return new Response(JSON.stringify({ error: "Erro ao criar cobrança", details: responseText }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Erro ao criar cobrança", details: responseText }),
+        {
+          status: abacateResponse.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const billing = JSON.parse(responseText);
