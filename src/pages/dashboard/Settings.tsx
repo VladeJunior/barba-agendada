@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Switch } from "@/components/ui/switch";
+import { TaxIdInput } from "@/components/ui/tax-id-input";
 import { toast } from "sonner";
-import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image, Gift, Bot } from "lucide-react";
+import { Store, MapPin, Link, Copy, Check, MessageSquare, Mail, Eye, EyeOff, QrCode, Wifi, WifiOff, Loader2, Send, Power, Image, Gift, Bot, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 export default function Settings() {
@@ -36,7 +37,8 @@ export default function Settings() {
     wapi_instance_id: "",
     wapi_token: "",
     loyalty_points_expiration_months: 12,
-    whatsapp_bot_enabled: false
+    whatsapp_bot_enabled: false,
+    tax_id: ""
   });
   const [copied, setCopied] = useState(false);
   const [slugError, setSlugError] = useState("");
@@ -179,6 +181,25 @@ export default function Settings() {
       if (interval) clearInterval(interval);
     };
   }, [qrDialogOpen, qrCodeImage, connectionStatus, checkInstanceStatus]);
+  // Format tax_id for display with mask
+  const formatTaxIdForDisplay = (value: string | null | undefined) => {
+    if (!value) return "";
+    const digits = value.replace(/\D/g, "");
+    if (digits.length <= 11) {
+      return digits
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    } else {
+      return digits
+        .slice(0, 14)
+        .replace(/(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1/$2")
+        .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+    }
+  };
+
   useEffect(() => {
     if (shop) {
       // Generate instance ID based on slug: PRO-{SLUG}
@@ -195,7 +216,8 @@ export default function Settings() {
         wapi_instance_id: generatedInstanceId,
         wapi_token: (shop as any).wapi_token || "",
         loyalty_points_expiration_months: (shop as any).loyalty_points_expiration_months ?? 12,
-        whatsapp_bot_enabled: (shop as any).whatsapp_bot_enabled ?? false
+        whatsapp_bot_enabled: (shop as any).whatsapp_bot_enabled ?? false,
+        tax_id: formatTaxIdForDisplay((shop as any).tax_id)
       });
     }
   }, [shop]);
@@ -311,6 +333,7 @@ export default function Settings() {
     if (!shop) return;
     setSaving(true);
     try {
+      const taxIdDigits = formData.tax_id.replace(/\D/g, "");
       const {
         error
       } = await supabase.from("shops").update({
@@ -324,7 +347,8 @@ export default function Settings() {
         wapi_instance_id: formData.wapi_instance_id || null,
         wapi_token: formData.wapi_token || null,
         loyalty_points_expiration_months: formData.loyalty_points_expiration_months || null,
-        whatsapp_bot_enabled: formData.whatsapp_bot_enabled
+        whatsapp_bot_enabled: formData.whatsapp_bot_enabled,
+        tax_id: taxIdDigits || null
       }).eq("id", shop.id);
       if (error) throw error;
       toast.success("Configurações salvas com sucesso!");
@@ -400,6 +424,21 @@ export default function Settings() {
               ...formData,
               phone: e.target.value
             })} placeholder="(00) 00000-0000" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tax_id">CPF/CNPJ</Label>
+              <TaxIdInput 
+                id="tax_id" 
+                value={formData.tax_id} 
+                onChange={(value) => setFormData({
+                  ...formData,
+                  tax_id: value
+                })} 
+              />
+              <p className="text-xs text-muted-foreground">
+                Necessário para gerar cobranças via Pix
+              </p>
             </div>
           </CardContent>
         </Card>
