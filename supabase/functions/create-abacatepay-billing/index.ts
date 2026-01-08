@@ -50,6 +50,15 @@ serve(async (req) => {
       });
     }
 
+    // Get user profile for name
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .single();
+
+    const customerName = profile?.full_name || shop.name || user.email?.split("@")[0] || "Cliente";
+
     // Plan prices (in BRL)
     const planPrices: Record<string, { name: string; price: number }> = {
       essencial: { name: "InfoBarber Essencial", price: 99 },
@@ -91,6 +100,7 @@ serve(async (req) => {
       returnUrl: `${origin}/dashboard/plans?payment=pending`,
       completionUrl: `${origin}/dashboard/plans?payment=success`,
       customer: {
+        name: customerName,
         email: user.email,
       },
       metadata: {
