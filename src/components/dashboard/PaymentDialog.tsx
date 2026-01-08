@@ -35,7 +35,22 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
       }
     } catch (error) {
       console.error("Payment error:", error);
-      toast.error("Erro ao processar pagamento. Tente novamente.");
+
+      let message = "Erro ao processar pagamento. Tente novamente.";
+
+      // Try to surface the backend error message (e.g. missing phone/name)
+      try {
+        const ctx = (error as any)?.context;
+        if (ctx && typeof ctx.json === "function") {
+          const body = await ctx.json();
+          if (body?.error && body?.details) message = `${body.error}: ${body.details}`;
+          else if (body?.error) message = body.error;
+        }
+      } catch {
+        // ignore parsing errors
+      }
+
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
