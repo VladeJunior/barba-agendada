@@ -18,16 +18,28 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate webhook secret from query parameter
+    // Debug logs
     const url = new URL(req.url);
+    console.log("Webhook called - URL params:", url.searchParams.toString());
+    console.log("Webhook called - Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
+
     const secretParam = url.searchParams.get("secret");
-    
-    if (webhookSecret && secretParam !== webhookSecret) {
-      console.error("Invalid webhook secret");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    console.log("Expected secret configured:", webhookSecret ? "Yes" : "No");
+    console.log("Received secret param:", secretParam ? "Yes" : "No");
+
+    // Validate webhook secret if configured
+    if (webhookSecret) {
+      if (secretParam !== webhookSecret) {
+        console.error("Secret mismatch! Expected:", webhookSecret, "Received:", secretParam);
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.log("Secret validated successfully");
+    } else {
+      console.log("No webhook secret configured, skipping validation");
     }
 
     const body = await req.json();
