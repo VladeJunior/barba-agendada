@@ -76,10 +76,9 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://infobarber.com.br";
 
-    // Create AbacatePay billing
     const billingBody = {
       frequency: "ONE_TIME",
-      methods: ["PIX"],
+      methods: ["PIX", "CREDIT_CARD"],
       products: [
         {
           externalId: `plan-${planId}-${shop.id}`,
