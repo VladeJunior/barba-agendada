@@ -855,6 +855,7 @@ export type Database = {
           subscription_status:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          tax_id: string | null
           trial_ends_at: string | null
           updated_at: string
           wapi_instance_id: string | null
@@ -885,6 +886,7 @@ export type Database = {
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          tax_id?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           wapi_instance_id?: string | null
@@ -915,6 +917,7 @@ export type Database = {
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          tax_id?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           wapi_instance_id?: string | null

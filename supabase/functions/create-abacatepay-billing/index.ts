@@ -97,13 +97,14 @@ serve(async (req) => {
       );
     }
 
-    const customerTaxId = normalizeTaxId(profile?.tax_id);
+    // Tax ID can come from profile or shop
+    const customerTaxId = normalizeTaxId(profile?.tax_id) || normalizeTaxId((shop as any).tax_id);
     if (!customerTaxId) {
       return new Response(
         JSON.stringify({
           error: "CPF/CNPJ obrigatório",
           details:
-            "Para gerar a cobrança, adicione seu CPF ou CNPJ na opção “Minha Conta”.",
+            "Para gerar a cobrança, adicione seu CPF ou CNPJ em Configurações.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
