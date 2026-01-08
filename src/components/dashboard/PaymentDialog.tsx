@@ -20,14 +20,13 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
   const handlePayment = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-mercadopago-preference", {
+      const { data, error } = await supabase.functions.invoke("create-abacatepay-billing", {
         body: { planId },
       });
 
       if (error) throw error;
 
-      // Use init_point for production (PIX available)
-      const checkoutUrl = data?.init_point || data?.sandbox_init_point;
+      const checkoutUrl = data?.url;
       
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
@@ -51,7 +50,7 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
             Assinar Plano {planName}
           </DialogTitle>
           <DialogDescription>
-            Você será redirecionado para o Mercado Pago para finalizar o pagamento de forma segura.
+            Você será redirecionado para a página de pagamento segura.
           </DialogDescription>
         </DialogHeader>
 
@@ -68,16 +67,16 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
           </div>
 
           <div className="text-sm text-muted-foreground">
-          <p>
-              Ao clicar em "Pagar com Mercado Pago", você será redirecionado para a página segura 
-              de pagamento do Mercado Pago onde poderá escolher entre PIX ou cartão de crédito à vista.
+            <p>
+              Ao clicar em "Pagar agora", você será redirecionado para a página segura 
+              de pagamento onde poderá pagar via PIX de forma rápida e segura.
             </p>
           </div>
 
           <Button 
             onClick={handlePayment} 
             disabled={isLoading}
-            className="w-full bg-[#009EE3] hover:bg-[#007EBB] text-white"
+            className="w-full bg-[#4CAF50] hover:bg-[#45a049] text-white"
           >
             {isLoading ? (
               <>
@@ -87,13 +86,13 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
             ) : (
               <>
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Pagar com Mercado Pago
+                Pagar agora via PIX
               </>
             )}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            🔒 Pagamento processado com segurança pelo Mercado Pago
+            🔒 Pagamento processado com segurança pela AbacatePay
           </p>
         </div>
       </DialogContent>
