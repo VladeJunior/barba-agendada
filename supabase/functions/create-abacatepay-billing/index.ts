@@ -78,7 +78,7 @@ serve(async (req) => {
 
     const billingBody = {
       frequency: "ONE_TIME",
-      methods: ["PIX", "CARD"],
+      methods: ["PIX"],
       products: [
         {
           externalId: `plan-${planId}-${shop.id}`,
