@@ -26,7 +26,11 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Usuário não encontrado" }), {
         status: 401,
@@ -50,10 +54,10 @@ serve(async (req) => {
       });
     }
 
-    // Get user profile for name + phone
+    // Get user profile for name + phone + tax id (CPF/CNPJ)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, phone")
+      .select("full_name, phone, tax_id")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -74,14 +78,32 @@ serve(async (req) => {
       return `+${withCountry}`;
     };
 
-    const customerCellphone = normalizeCellphone(profile?.phone ?? shop.phone);
+    const normalizeTaxId = (value: string | null | undefined) => {
+      if (!value) return null;
+      const digits = value.replace(/\D/g, "");
+      if (digits.length === 11 || digits.length === 14) return digits; // CPF or CNPJ
+      return null;
+    };
 
+    const customerCellphone = normalizeCellphone(profile?.phone ?? shop.phone);
     if (!customerCellphone) {
       return new Response(
         JSON.stringify({
           error: "Telefone obrigatório",
           details:
             "Para gerar a cobrança, adicione um celular no seu perfil (ou telefone da barbearia) com DDD.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const customerTaxId = normalizeTaxId(profile?.tax_id);
+    if (!customerTaxId) {
+      return new Response(
+        JSON.stringify({
+          error: "CPF/CNPJ obrigatório",
+          details:
+            "Para gerar a cobrança, adicione seu CPF ou CNPJ na opção “Minha Conta”.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -134,6 +156,7 @@ serve(async (req) => {
         name: customerName,
         email: user.email,
         cellphone: customerCellphone,
+        taxId: customerTaxId,
       },
       metadata: {
         shop_id: shop.id,
@@ -142,20 +165,27 @@ serve(async (req) => {
       },
     };
 
-    console.log("Creating AbacatePay billing:", JSON.stringify(billingBody, null, 2));
-
-    const abacateResponse = await fetch("https://api.abacatepay.com/v1/billing/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ABACATEPAY_API_KEY}`,
-      },
-      body: JSON.stringify(billingBody),
+    // Avoid logging sensitive customer data
+    console.log("Creating AbacatePay billing", {
+      planId,
+      shop_id: shop.id,
+      user_id: user.id,
     });
+
+    const abacateResponse = await fetch(
+      "https://api.abacatepay.com/v1/billing/create",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ABACATEPAY_API_KEY}`,
+        },
+        body: JSON.stringify(billingBody),
+      }
+    );
 
     const responseText = await abacateResponse.text();
     console.log("AbacatePay response status:", abacateResponse.status);
-    console.log("AbacatePay response:", responseText);
 
     if (!abacateResponse.ok) {
       console.error("AbacatePay error:", abacateResponse.status, responseText);
@@ -169,7 +199,6 @@ serve(async (req) => {
     }
 
     const billing = JSON.parse(responseText);
-    console.log("Billing created:", billing.data?.id);
 
     return new Response(
       JSON.stringify({
