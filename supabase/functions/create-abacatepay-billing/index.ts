@@ -74,13 +74,13 @@ serve(async (req) => {
       const digits = value.replace(/\D/g, "");
       if (!digits) return null;
 
-      // Assume Brazilian numbers when country code isn't provided.
-      const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+      // Remove country code if present, keep only DDD + number
+      const withoutCountry = digits.startsWith("55") ? digits.slice(2) : digits;
 
-      // BR: 55 + DDD(2) + phone(8-9) => 12-13 digits
-      if (withCountry.length < 12 || withCountry.length > 13) return null;
+      // BR: DDD(2) + phone(8-9) => 10-11 digits
+      if (withoutCountry.length < 10 || withoutCountry.length > 11) return null;
 
-      return `+${withCountry}`;
+      return withoutCountry;
     };
 
     const normalizeTaxId = (value: string | null | undefined) => {
