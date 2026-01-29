@@ -45,6 +45,7 @@ import Support from "./pages/dashboard/Support";
 
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import BrandGuide from "./pages/BrandGuide";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/termos" element={<Terms />} />
             <Route path="/privacidade" element={<Privacy />} />
+            <Route path="/marca" element={<BrandGuide />} />
             <Route path="/agendar/:shopSlug" element={<Booking />} />
             <Route path="/agendar/:shopSlug/barbeiro/:barberId" element={<BarberProfile />} />
             <Route path="/agendar/:shopSlug/meus-agendamentos" element={<MyAppointmentsByShop />} />
