@@ -1,166 +1,119 @@
 
 
-# Sistema de Cupom de Desconto para Planos
+# Correção do Telefone + Controle de Uso Único do Cupom
 
-## Analise do Sistema Atual
+## 1. Problema do Telefone com 55
 
-Apos analisar o codigo, identifiquei que:
+A edge function foi re-deployada agora. Por favor, teste novamente o pagamento - o código atualizado que remove o prefixo 55 já está ativo.
 
-1. O **ExitIntentPopup** oferece o cupom `BARBER20` com 20% de desconto
-2. O **PaymentDialog** e a **edge function create-abacatepay-billing** processam pagamentos
-3. A **AbacatePay tem suporte nativo a cupons** via API (create/apply)
-
-## Opcoes de Implementacao
-
-Existem duas abordagens para aplicar o cupom:
-
-### Opcao 1: Cupom Aplicado no Frontend (Recomendada)
-
-O desconto e calculado no frontend antes de enviar para a AbacatePay. Mais simples e nao depende de recursos extras da API.
-
-**Fluxo:**
-```text
-Usuario digita cupom → Valida localmente → Calcula preco com desconto → Envia preco final para AbacatePay
-```
-
-**Vantagens:**
-- Implementacao simples e rapida
-- Nao depende de criar cupons na AbacatePay
-- Controle total sobre os cupons validos
-
-**Desvantagens:**
-- Cupons ficam "hardcoded" no codigo
-
-### Opcao 2: Cupom via API AbacatePay
-
-Criar o cupom na AbacatePay e aplicar via API no momento da cobranca.
-
-**Vantagens:**
-- Cupons gerenciados externamente
-- Rastreamento de uso pela AbacatePay
-
-**Desvantagens:**
-- Requer criar cupom manualmente no painel AbacatePay
-- Mais complexo de implementar
+Se ainda não funcionar, posso adicionar logs específicos para debugar o valor do telefone.
 
 ---
 
-## Plano de Implementacao (Opcao 1 - Recomendada)
+## 2. Controle de Uso Único do Cupom
 
-### O Que Sera Feito
+Para garantir que cada usuário use o cupom apenas uma vez, precisamos registrar os usos no banco de dados.
 
-**1. Adicionar campo de cupom no PaymentDialog**
+### O Que Será Feito
 
-Modificar `src/components/dashboard/PaymentDialog.tsx`:
-- Adicionar input para digitar codigo do cupom
-- Botao "Aplicar" para validar o cupom
-- Exibir desconto aplicado e preco final
-- Mostrar mensagem de erro se cupom invalido
+**1. Criar tabela `subscription_coupon_uses`**
 
-**2. Passar cupom para a edge function**
+Nova tabela para registrar cada uso de cupom:
 
-Modificar a chamada para `create-abacatepay-billing`:
-- Enviar codigo do cupom junto com o planId
-- A edge function calcula o preco com desconto
+| Coluna        | Tipo      | Descrição                           |
+|---------------|-----------|-------------------------------------|
+| id            | uuid      | Identificador único                 |
+| shop_id       | uuid      | Barbearia que usou o cupom          |
+| coupon_code   | text      | Código do cupom usado               |
+| used_at       | timestamp | Data/hora do uso                    |
+| billing_id    | text      | ID da cobrança na AbacatePay        |
 
-**3. Atualizar edge function para aplicar desconto**
+**Índice único**: `(shop_id, coupon_code)` - impede uso duplicado
 
-Modificar `supabase/functions/create-abacatepay-billing/index.ts`:
-- Receber codigo do cupom
-- Validar cupom (codigo, validade, limite de uso)
-- Calcular preco com desconto
-- Enviar preco final para AbacatePay
+**2. Verificar uso anterior na edge function**
 
-**4. Criar tabela para cupons de assinatura (opcional)**
-
-Se quiser gerenciar cupons dinamicamente, criar tabela `subscription_coupons` com:
-- codigo
-- desconto (porcentagem)
-- data de expiracao
-- limite de uso
-- contador de uso
-
-### Fluxo do Usuario
+Antes de aplicar o cupom, verificar se a barbearia já usou:
 
 ```text
-+------------------------------------------+
-|          Dialog de Pagamento             |
-|------------------------------------------|
-|  Plano: Profissional                     |
-|  Valor: R$ 149,00/mes                    |
-|                                          |
-|  [___Codigo do cupom___] [Aplicar]       |
-|                                          |
-|  ✓ Cupom BARBER20 aplicado!              |
-|    Desconto: -R$ 29,80 (20%)             |
-|    Valor final: R$ 119,20                |
-|                                          |
-|  [        Pagar agora via PIX       ]    |
-+------------------------------------------+
+Fluxo:
+1. Usuário digita cupom BARBER20
+2. Edge function consulta tabela subscription_coupon_uses
+3. Se já existe registro para (shop_id, BARBER20) → Cupom inválido
+4. Se não existe → Aplica desconto
+5. Após pagamento confirmado → Registra uso na tabela
 ```
 
-### Cupons Validos (Inicialmente)
+**3. Registrar uso no webhook de pagamento**
 
-| Codigo    | Desconto | Descricao                        |
-|-----------|----------|----------------------------------|
-| BARBER20  | 20%      | Cupom do pop-up de exit intent   |
-
----
-
-## Detalhes Tecnicos
+No `abacatepay-webhook`, quando o pagamento for confirmado:
+- Extrair `coupon_code` do metadata
+- Inserir registro em `subscription_coupon_uses`
 
 ### Arquivos a Modificar
 
-1. **`src/components/dashboard/PaymentDialog.tsx`**
-   - Adicionar estado para cupom (`couponCode`, `appliedCoupon`, `discountAmount`)
-   - Funcao `handleApplyCoupon()` para validar e calcular desconto
-   - Exibir UI do cupom e desconto aplicado
-   - Passar cupom para a edge function
-
+1. **Criar migração** para tabela `subscription_coupon_uses`
 2. **`supabase/functions/create-abacatepay-billing/index.ts`**
-   - Receber `couponCode` no body da requisicao
-   - Validar cupom contra lista de cupons validos
-   - Calcular preco com desconto
-   - Registrar uso do cupom (opcional)
+   - Adicionar verificação de uso anterior
+   - Retornar erro se cupom já foi usado pela barbearia
+3. **`supabase/functions/abacatepay-webhook/index.ts`**
+   - Registrar uso do cupom após pagamento confirmado
+4. **`src/components/dashboard/PaymentDialog.tsx`**
+   - Validar cupom via edge function (não apenas localmente)
+   - Mostrar erro "Cupom já utilizado" quando aplicável
 
-### Interface do PaymentDialog Atualizada
+### Fluxo do Usuário
 
 ```text
-Props atuais:
-- planId
-- planName  
-- planPrice
+Primeira vez usando BARBER20:
+┌─────────────────────────────────────┐
+│  Cupom: [BARBER20] [Aplicar]        │
+│  ✓ Cupom BARBER20 aplicado!         │
+│  Desconto: -R$ 29,80 (20%)          │
+└─────────────────────────────────────┘
 
-Novos estados internos:
-- couponCode: string
-- appliedCoupon: { code: string, discountPercent: number } | null
-- discountAmount: number
-- finalPrice: number
-- couponError: string | null
-- isValidatingCoupon: boolean
+Segunda vez tentando usar BARBER20:
+┌─────────────────────────────────────┐
+│  Cupom: [BARBER20] [Aplicar]        │
+│  ✗ Este cupom já foi utilizado      │
+│    pela sua barbearia.              │
+└─────────────────────────────────────┘
 ```
 
-### Validacao de Cupons
+### Detalhes Técnicos
 
-Cupons validos serao definidos como constante (inicialmente):
+**Migração SQL:**
+```sql
+CREATE TABLE subscription_coupon_uses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  shop_id uuid NOT NULL REFERENCES shops(id),
+  coupon_code text NOT NULL,
+  used_at timestamptz NOT NULL DEFAULT now(),
+  billing_id text,
+  UNIQUE(shop_id, coupon_code)
+);
 
-```text
-VALID_COUPONS = {
-  BARBER20: { discountPercent: 20, description: "20% de desconto" }
+ALTER TABLE subscription_coupon_uses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role can manage coupon uses"
+  ON subscription_coupon_uses FOR ALL
+  USING (false) WITH CHECK (false);
+```
+
+**Verificação na edge function:**
+```typescript
+// Verificar se cupom já foi usado pela barbearia
+const { data: existingUse } = await supabase
+  .from("subscription_coupon_uses")
+  .select("id")
+  .eq("shop_id", shop.id)
+  .eq("coupon_code", normalizedCode)
+  .single();
+
+if (existingUse) {
+  return new Response(
+    JSON.stringify({ error: "Este cupom já foi utilizado pela sua barbearia." }),
+    { status: 400, ... }
+  );
 }
 ```
-
-Pode ser migrado para tabela no banco futuramente.
-
----
-
-## Consideracoes Adicionais
-
-1. **Cupom so vale para primeira mensalidade**: O desconto e aplicado apenas no primeiro pagamento, nao em renovacoes
-
-2. **Validacao case-insensitive**: Aceitar `barber20`, `BARBER20`, `Barber20`
-
-3. **Feedback visual claro**: Mostrar checkmark verde quando cupom valido, erro em vermelho quando invalido
-
-4. **Pre-preencher cupom**: Se usuario veio do pop-up de exit intent, podemos pre-preencher o cupom automaticamente (futuro)
 
