@@ -137,6 +137,26 @@ serve(async (req) => {
       const normalizedCode = couponCode.trim().toUpperCase();
       const coupon = VALID_COUPONS[normalizedCode];
       if (coupon) {
+        // Check if coupon was already used by this shop
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+        
+        const { data: existingUse } = await supabaseAdmin
+          .from("subscription_coupon_uses")
+          .select("id")
+          .eq("shop_id", shop.id)
+          .eq("coupon_code", normalizedCode)
+          .maybeSingle();
+
+        if (existingUse) {
+          return new Response(
+            JSON.stringify({ error: "Este cupom já foi utilizado pela sua barbearia." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         discountPercent = coupon.discountPercent;
         appliedCouponCode = normalizedCode;
         console.log(`Coupon ${normalizedCode} applied: ${discountPercent}% discount`);

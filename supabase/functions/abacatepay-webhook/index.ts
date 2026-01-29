@@ -93,6 +93,25 @@ serve(async (req) => {
 
       console.log(`Shop ${shopId} subscription updated successfully to plan ${planId}`);
 
+      // Register coupon usage if a coupon was applied
+      const couponCode = metadata?.coupon_code;
+      if (couponCode) {
+        const { error: couponError } = await supabase
+          .from("subscription_coupon_uses")
+          .insert({
+            shop_id: shopId,
+            coupon_code: couponCode,
+            billing_id: billing.id,
+          });
+
+        if (couponError) {
+          // Log but don't fail - subscription was already updated
+          console.error("Error registering coupon usage:", couponError);
+        } else {
+          console.log(`Coupon ${couponCode} usage registered for shop ${shopId}`);
+        }
+      }
+
       return new Response(JSON.stringify({ success: true, message: "Subscription updated" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
