@@ -6,6 +6,7 @@ import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { CTASection } from "@/components/landing/CTASection";
 import { Footer } from "@/components/landing/Footer";
+import { ExitIntentPopup } from "@/components/landing/ExitIntentPopup";
 
 const Index = () => {
   return (
@@ -20,6 +21,7 @@ const Index = () => {
         <CTASection />
       </main>
       <Footer />
+      <ExitIntentPopup />
     </div>
   );
 };
