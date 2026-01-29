@@ -69,19 +69,29 @@ serve(async (req) => {
     const customerName =
       profile?.full_name || shop.name || user.email?.split("@")[0] || "Cliente";
 
-    const normalizeCellphone = (value: string | null | undefined) => {
-      if (!value) return null;
-      const digits = value.replace(/\D/g, "");
-      if (!digits) return null;
+  const normalizeCellphone = (value: string | null | undefined) => {
+    if (!value) return null;
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return null;
 
-      // Remove country code if present, keep only DDD + number
-      const withoutCountry = digits.startsWith("55") ? digits.slice(2) : digits;
+    // Remove country code if present, keep only DDD + number
+    const withoutCountry = digits.startsWith("55") ? digits.slice(2) : digits;
 
-      // BR: DDD(2) + phone(8-9) => 10-11 digits
-      if (withoutCountry.length < 10 || withoutCountry.length > 11) return null;
+    // BR: DDD(2) + phone(8-9) => 10-11 digits
+    if (withoutCountry.length < 10 || withoutCountry.length > 11) return null;
 
-      return withoutCountry;
-    };
+    // Format as (DDD) XXXXX-XXXX or (DDD) XXXX-XXXX
+    const ddd = withoutCountry.slice(0, 2);
+    const rest = withoutCountry.slice(2);
+    
+    if (rest.length === 9) {
+      // Celular: (XX) XXXXX-XXXX
+      return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+    } else {
+      // Fixo: (XX) XXXX-XXXX
+      return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+    }
+  };
 
     const normalizeTaxId = (value: string | null | undefined) => {
       if (!value) return null;
