@@ -197,7 +197,7 @@ export function PaymentDialog({ open, onOpenChange, planId, planName, planPrice 
           <div className="text-sm text-muted-foreground">
             <p>
               Ao clicar em "Pagar agora", você será redirecionado para a página segura 
-              de pagamento onde poderá pagar via PIX de forma rápida e segura.
+              de pagamento onde poderá pagar via PIX ou cartão de crédito de forma rápida e segura.
             </p>
           </div>
 
