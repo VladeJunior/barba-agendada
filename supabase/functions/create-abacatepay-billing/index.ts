@@ -38,7 +38,12 @@ serve(async (req) => {
       });
     }
 
-    const { planId } = await req.json();
+    const { planId, couponCode } = await req.json();
+
+    // Valid coupons - can be moved to database later
+    const VALID_COUPONS: Record<string, { discountPercent: number; description: string }> = {
+      BARBER20: { discountPercent: 20, description: "20% de desconto" },
+    };
 
     // Get shop data
     const { data: shop, error: shopError } = await supabase
@@ -125,6 +130,24 @@ serve(async (req) => {
       });
     }
 
+    // Calculate discount if coupon is provided
+    let discountPercent = 0;
+    let appliedCouponCode: string | null = null;
+    if (couponCode) {
+      const normalizedCode = couponCode.trim().toUpperCase();
+      const coupon = VALID_COUPONS[normalizedCode];
+      if (coupon) {
+        discountPercent = coupon.discountPercent;
+        appliedCouponCode = normalizedCode;
+        console.log(`Coupon ${normalizedCode} applied: ${discountPercent}% discount`);
+      } else {
+        console.log(`Invalid coupon code: ${couponCode}`);
+      }
+    }
+
+    const discountAmount = (plan.price * discountPercent) / 100;
+    const finalPrice = plan.price - discountAmount;
+
     const ABACATEPAY_API_KEY = Deno.env.get("ABACATEPAY_API_KEY");
     if (!ABACATEPAY_API_KEY) {
       console.error("ABACATEPAY_API_KEY not configured");
@@ -139,16 +162,22 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://infobarber.com.br";
 
+    // Build product description with discount info if applicable
+    let productDescription = `Assinatura mensal do plano ${plan.name}`;
+    if (appliedCouponCode) {
+      productDescription += ` (cupom ${appliedCouponCode}: ${discountPercent}% off)`;
+    }
+
     const billingBody = {
       frequency: "ONE_TIME",
       methods: ["PIX"],
       products: [
         {
           externalId: `plan-${planId}-${shop.id}`,
-          name: plan.name,
-          description: `Assinatura mensal do plano ${plan.name}`,
+          name: appliedCouponCode ? `${plan.name} (${discountPercent}% OFF)` : plan.name,
+          description: productDescription,
           quantity: 1,
-          price: plan.price * 100, // AbacatePay expects price in cents
+          price: Math.round(finalPrice * 100), // AbacatePay expects price in cents
         },
       ],
       returnUrl: `${origin}/dashboard/plans?payment=pending`,
@@ -163,6 +192,10 @@ serve(async (req) => {
         shop_id: shop.id,
         plan_id: planId,
         user_id: user.id,
+        coupon_code: appliedCouponCode,
+        original_price: plan.price,
+        discount_percent: discountPercent,
+        final_price: finalPrice,
       },
     };
 
@@ -171,6 +204,9 @@ serve(async (req) => {
       planId,
       shop_id: shop.id,
       user_id: user.id,
+      coupon: appliedCouponCode,
+      originalPrice: plan.price,
+      finalPrice,
     });
 
     const abacateResponse = await fetch(
