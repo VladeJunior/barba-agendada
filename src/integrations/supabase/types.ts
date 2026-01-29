@@ -926,6 +926,38 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_coupon_uses: {
+        Row: {
+          billing_id: string | null
+          coupon_code: string
+          id: string
+          shop_id: string
+          used_at: string
+        }
+        Insert: {
+          billing_id?: string | null
+          coupon_code: string
+          id?: string
+          shop_id: string
+          used_at?: string
+        }
+        Update: {
+          billing_id?: string | null
+          coupon_code?: string
+          id?: string
+          shop_id?: string
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_coupon_uses_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_conversations: {
         Row: {
           created_at: string
