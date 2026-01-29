@@ -1,119 +1,85 @@
 
 
-# Correção do Telefone + Controle de Uso Único do Cupom
+# Correção do Formato do Telefone para AbacatePay
 
-## 1. Problema do Telefone com 55
+## Problema Identificado
 
-A edge function foi re-deployada agora. Por favor, teste novamente o pagamento - o código atualizado que remove o prefixo 55 já está ativo.
+Após análise da documentação da AbacatePay e do banco de dados:
 
-Se ainda não funcionar, posso adicionar logs específicos para debugar o valor do telefone.
+**Formato atual enviado:** `19998733540` (apenas dígitos)
+**Formato esperado pela AbacatePay:** `(19) 99873-3540` (formatado com parênteses e hífen)
 
----
-
-## 2. Controle de Uso Único do Cupom
-
-Para garantir que cada usuário use o cupom apenas uma vez, precisamos registrar os usos no banco de dados.
-
-### O Que Será Feito
-
-**1. Criar tabela `subscription_coupon_uses`**
-
-Nova tabela para registrar cada uso de cupom:
-
-| Coluna        | Tipo      | Descrição                           |
-|---------------|-----------|-------------------------------------|
-| id            | uuid      | Identificador único                 |
-| shop_id       | uuid      | Barbearia que usou o cupom          |
-| coupon_code   | text      | Código do cupom usado               |
-| used_at       | timestamp | Data/hora do uso                    |
-| billing_id    | text      | ID da cobrança na AbacatePay        |
-
-**Índice único**: `(shop_id, coupon_code)` - impede uso duplicado
-
-**2. Verificar uso anterior na edge function**
-
-Antes de aplicar o cupom, verificar se a barbearia já usou:
-
-```text
-Fluxo:
-1. Usuário digita cupom BARBER20
-2. Edge function consulta tabela subscription_coupon_uses
-3. Se já existe registro para (shop_id, BARBER20) → Cupom inválido
-4. Se não existe → Aplica desconto
-5. Após pagamento confirmado → Registra uso na tabela
-```
-
-**3. Registrar uso no webhook de pagamento**
-
-No `abacatepay-webhook`, quando o pagamento for confirmado:
-- Extrair `coupon_code` do metadata
-- Inserir registro em `subscription_coupon_uses`
-
-### Arquivos a Modificar
-
-1. **Criar migração** para tabela `subscription_coupon_uses`
-2. **`supabase/functions/create-abacatepay-billing/index.ts`**
-   - Adicionar verificação de uso anterior
-   - Retornar erro se cupom já foi usado pela barbearia
-3. **`supabase/functions/abacatepay-webhook/index.ts`**
-   - Registrar uso do cupom após pagamento confirmado
-4. **`src/components/dashboard/PaymentDialog.tsx`**
-   - Validar cupom via edge function (não apenas localmente)
-   - Mostrar erro "Cupom já utilizado" quando aplicável
-
-### Fluxo do Usuário
-
-```text
-Primeira vez usando BARBER20:
-┌─────────────────────────────────────┐
-│  Cupom: [BARBER20] [Aplicar]        │
-│  ✓ Cupom BARBER20 aplicado!         │
-│  Desconto: -R$ 29,80 (20%)          │
-└─────────────────────────────────────┘
-
-Segunda vez tentando usar BARBER20:
-┌─────────────────────────────────────┐
-│  Cupom: [BARBER20] [Aplicar]        │
-│  ✗ Este cupom já foi utilizado      │
-│    pela sua barbearia.              │
-└─────────────────────────────────────┘
-```
-
-### Detalhes Técnicos
-
-**Migração SQL:**
-```sql
-CREATE TABLE subscription_coupon_uses (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  shop_id uuid NOT NULL REFERENCES shops(id),
-  coupon_code text NOT NULL,
-  used_at timestamptz NOT NULL DEFAULT now(),
-  billing_id text,
-  UNIQUE(shop_id, coupon_code)
-);
-
-ALTER TABLE subscription_coupon_uses ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Service role can manage coupon uses"
-  ON subscription_coupon_uses FOR ALL
-  USING (false) WITH CHECK (false);
-```
-
-**Verificação na edge function:**
-```typescript
-// Verificar se cupom já foi usado pela barbearia
-const { data: existingUse } = await supabase
-  .from("subscription_coupon_uses")
-  .select("id")
-  .eq("shop_id", shop.id)
-  .eq("coupon_code", normalizedCode)
-  .single();
-
-if (existingUse) {
-  return new Response(
-    JSON.stringify({ error: "Este cupom já foi utilizado pela sua barbearia." }),
-    { status: 400, ... }
-  );
+A documentação da AbacatePay mostra claramente no exemplo:
+```json
+{
+  "cellphone": "(11) 4002-8922"
 }
 ```
+
+A AbacatePay exibe o telefone com `+55` na frente automaticamente, mas espera receber o número no formato brasileiro com DDD entre parênteses.
+
+## Solução
+
+Modificar a função `normalizeCellphone` na edge function `create-abacatepay-billing` para:
+
+1. Extrair apenas os dígitos
+2. Remover o prefixo `55` se presente
+3. **Formatar como `(DDD) XXXXX-XXXX` ou `(DDD) XXXX-XXXX`** dependendo se é celular (9 dígitos) ou fixo (8 dígitos)
+
+## Arquivo a Modificar
+
+**`supabase/functions/create-abacatepay-billing/index.ts`**
+
+## Nova Lógica da Função
+
+```text
+Entrada: "+5519998733540" ou "5519998733540" ou "(19) 99873-3540"
+         ↓
+Extrair dígitos: "5519998733540"
+         ↓
+Remover 55 se presente: "19998733540"
+         ↓
+Validar comprimento: 10-11 dígitos ✓
+         ↓
+Formatar: "(19) 99873-3540"
+         ↓
+Saída: "(19) 99873-3540"
+```
+
+## Código Atualizado
+
+```typescript
+const normalizeCellphone = (value: string | null | undefined) => {
+  if (!value) return null;
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return null;
+
+  // Remove country code if present, keep only DDD + number
+  const withoutCountry = digits.startsWith("55") ? digits.slice(2) : digits;
+
+  // BR: DDD(2) + phone(8-9) => 10-11 digits
+  if (withoutCountry.length < 10 || withoutCountry.length > 11) return null;
+
+  // Format as (DDD) XXXXX-XXXX or (DDD) XXXX-XXXX
+  const ddd = withoutCountry.slice(0, 2);
+  const rest = withoutCountry.slice(2);
+  
+  if (rest.length === 9) {
+    // Celular: (XX) XXXXX-XXXX
+    return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+  } else {
+    // Fixo: (XX) XXXX-XXXX
+    return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  }
+};
+```
+
+## Resultado Esperado
+
+| Entrada no banco           | Saída formatada        |
+|----------------------------|------------------------|
+| `(19) 99873-3540`          | `(19) 99873-3540`      |
+| `+5519998733540`           | `(19) 99873-3540`      |
+| `5519998733540`            | `(19) 99873-3540`      |
+| `19998733540`              | `(19) 99873-3540`      |
 
