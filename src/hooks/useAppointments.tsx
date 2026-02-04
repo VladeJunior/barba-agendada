@@ -117,11 +117,24 @@ export function useCreateAppointment() {
     mutationFn: async (input: AppointmentInput) => {
       if (!shop) throw new Error("Shop not found");
 
+      // Fetch service price to save original_price and final_price
+      const { data: service, error: serviceError } = await supabase
+        .from("services")
+        .select("price")
+        .eq("id", input.service_id)
+        .single();
+
+      if (serviceError) throw serviceError;
+
+      const servicePrice = service?.price || 0;
+
       const { data, error } = await supabase
         .from("appointments")
         .insert({
           shop_id: shop.id,
           status: 'confirmed' as const,
+          original_price: servicePrice,
+          final_price: servicePrice,
           ...input,
         })
         .select()
