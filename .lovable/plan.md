@@ -1,305 +1,254 @@
 
-# Plano de Implementação: Sistema Híbrido de Vendas de Produtos
+# Plano de Implementação: Melhorias no Dashboard
 
 ## Visão Geral
-Implementar um sistema completo de vendas de produtos com duas modalidades:
-1. **Venda durante atendimento** - Adicionar produtos a um agendamento existente, com opção de comissão para o barbeiro
-2. **PDV (Ponto de Venda)** - Tela dedicada para vendas avulsas, independente de agendamentos
+Adicionar informações de vendas de produtos ao dashboard principal, incluindo:
+1. Card de vendas de produtos com comparação percentual
+2. Card de faturamento atualizado com separação serviços/produtos
+3. Lista dos produtos mais vendidos (similar ao "Serviços Mais Populares")
+4. Card de alertas de estoque baixo
 
 ---
 
-## 1. Banco de Dados
+## 1. Atualizar Hook: `useDashboardMetrics.tsx`
 
-### Nova Tabela: `product_sales`
-Registra todas as vendas de produtos, tanto vinculadas a agendamentos quanto avulsas.
-
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id` | uuid | Identificador único (PK) |
-| `shop_id` | uuid | Referência à barbearia (FK) |
-| `appointment_id` | uuid | Referência ao agendamento (opcional - NULL para venda avulsa) |
-| `product_id` | uuid | Referência ao produto (FK) |
-| `barber_id` | uuid | Barbeiro que realizou a venda (opcional) |
-| `quantity` | integer | Quantidade vendida |
-| `unit_price` | numeric | Preço unitário no momento da venda |
-| `total_price` | numeric | Preço total (quantity * unit_price) |
-| `has_commission` | boolean | Gera comissão para o barbeiro? (default: false) |
-| `commission_rate` | numeric | Taxa de comissão aplicada |
-| `commission_amount` | numeric | Valor da comissão calculada |
-| `client_name` | text | Nome do cliente (para vendas avulsas) |
-| `client_phone` | text | Telefone do cliente (para vendas avulsas) |
-| `payment_method` | text | Método de pagamento (dinheiro, pix, cartão) |
-| `notes` | text | Observações |
-| `created_at` | timestamptz | Data da venda |
-
-### Políticas RLS
-- Donos podem gerenciar todas as vendas da sua barbearia
-- Barbeiros podem visualizar vendas que realizaram
-- Leitura pública desabilitada
-
-### Trigger: Atualizar Estoque
-- Ao inserir uma venda, decrementar `stock_quantity` do produto automaticamente
-
----
-
-## 2. Estrutura de Arquivos
+### Novos Dados a Buscar
+Adicionar queries para buscar dados de vendas de produtos no mesmo período:
 
 ```text
-src/
-├── hooks/
-│   └── useProductSales.tsx        # Hook CRUD para vendas
-├── pages/dashboard/
-│   └── Sales.tsx                  # Página PDV para vendas avulsas
-├── components/
-│   └── schedule/
-│       └── AddProductDialog.tsx   # Modal para adicionar produtos ao agendamento
-│       └── AppointmentProductsList.tsx  # Lista de produtos vinculados ao agendamento
+- Vendas de produtos (período atual)
+- Vendas de produtos (período anterior - para comparação %)
+- Produtos com estoque baixo (stock_quantity <= min_stock_alert)
+- Top 5 produtos mais vendidos por quantidade
 ```
+
+### Novas Métricas Retornadas
+| Métrica | Tipo | Descrição |
+|---------|------|-----------|
+| `productSalesRevenue` | number | Total de vendas de produtos no período |
+| `productSalesGrowth` | number | Variação % em relação ao período anterior |
+| `productSalesCount` | number | Quantidade de vendas realizadas |
+| `topProducts` | array | Top 5 produtos mais vendidos |
+| `lowStockProducts` | array | Produtos com estoque abaixo do mínimo |
+| `serviceRevenue` | number | Faturamento apenas de serviços (já existe) |
+| `totalRevenue` | number | Serviços + Produtos combinados |
 
 ---
 
-## 3. Funcionalidade 1: Venda Durante Atendimento
+## 2. Estrutura das Queries SQL
 
-### Modificações no `AppointmentDetailsDialog.tsx`
-
-Adicionar seção de produtos vendidos dentro do dialog de detalhes do agendamento:
-
-- Botão "+ Adicionar Produto" visível quando status é "confirmed"
-- Lista de produtos já adicionados ao atendimento
-- Para cada produto:
-  - Nome, quantidade, preço unitário, subtotal
-  - Switch "Gera Comissão?" (default: OFF)
-  - Se ativado, mostra a taxa de comissão do barbeiro
-  - Botão para remover produto
-- Total de produtos exibido junto ao valor do serviço
-- Valor total atualizado (serviço + produtos)
-
-### Componente: `AddProductDialog.tsx`
-Modal para selecionar e adicionar produto à venda:
-- Select de produto (mostra nome, preço, estoque disponível)
-- Input de quantidade
-- Switch "Gera Comissão para o Barbeiro?"
-- Preview do valor total
-- Validação de estoque disponível
-
-### Fluxo
-1. Barbeiro clica em um agendamento confirmado
-2. Na seção de produtos, clica em "+ Adicionar Produto"
-3. Seleciona produto, quantidade e define se gera comissão
-4. Produto é registrado em `product_sales` com `appointment_id` preenchido
-5. Estoque é decrementado automaticamente
-6. Valor aparece na lista de produtos do agendamento
-
----
-
-## 4. Funcionalidade 2: PDV (Vendas Avulsas)
-
-### Nova Página: `/dashboard/sales`
-
-Layout em formato de PDV simplificado:
-
-**Lado Esquerdo: Seleção de Produtos**
-- Grid de produtos com imagem, nome, preço
-- Campo de busca por nome/SKU
-- Indicador de estoque
-- Clique adiciona ao carrinho
-
-**Lado Direito: Carrinho**
-- Lista de produtos adicionados
-- Quantidade editável (+/-)
-- Subtotal por item
-- Para cada item:
-  - Checkbox "Comissão" (opcional)
-  - Se marcado, select do barbeiro e taxa aplicada
-- Total geral
-- Campos opcionais: Cliente (nome), Telefone
-- Select: Método de pagamento
-- Botão "Finalizar Venda"
-
-### Fluxo
-1. Atendente seleciona produtos no grid
-2. Ajusta quantidades no carrinho
-3. Define se algum produto gera comissão e para qual barbeiro
-4. Preenche dados do cliente (opcional)
-5. Seleciona método de pagamento
-6. Confirma venda
-7. Sistema registra em `product_sales` com `appointment_id = NULL`
-8. Estoque decrementado automaticamente
-
----
-
-## 5. Navegação
-
-### Sidebar do Dashboard
-Adicionar novo item no menu (para owners):
-```
-{ title: "Vendas", url: "/dashboard/sales", icon: ShoppingCart }
-```
-
-Posição: Após "Produtos"
-
-### Rotas
-Adicionar em `App.tsx`:
-```
-<Route path="sales" element={<Sales />} />
-```
-
----
-
-## 6. Integração com Comissões
-
-### Modificações no `useCommissionControl.tsx`
-
-Atualizar query de cálculo de comissões para incluir vendas de produtos:
-
+### Query: Vendas de Produtos (período atual)
 ```sql
--- Buscar vendas de produtos com comissão no período
 SELECT 
-  barber_id,
-  SUM(commission_amount) as product_commission
+  SUM(total_price) as total_revenue,
+  COUNT(*) as sales_count,
+  product_id,
+  products.name,
+  SUM(quantity) as total_quantity
 FROM product_sales
-WHERE shop_id = ? 
-  AND has_commission = true
-  AND created_at BETWEEN ? AND ?
-GROUP BY barber_id
+  JOIN products ON products.id = product_sales.product_id
+WHERE shop_id = ?
+  AND created_at >= start_date
+  AND created_at <= end_date
+GROUP BY product_id, products.name
+ORDER BY total_quantity DESC
+LIMIT 5
 ```
 
-O resumo de comissões passará a mostrar:
-- Comissão de serviços (atual)
-- Comissão de produtos (novo)
-- Total combinado
-
----
-
-## 7. Detalhes da Interface
-
-### Modal Adicionar Produto (Agendamento)
-```text
-┌─────────────────────────────────────────┐
-│  Adicionar Produto                      │
-├─────────────────────────────────────────┤
-│  Produto:                               │
-│  [ Select produto ▼ ]                   │
-│                                         │
-│  Quantidade: [ 1 ] [+] [-]              │
-│                                         │
-│  Valor: R$ 45,00                        │
-│                                         │
-│  ┌─────────────────────────────────────┐│
-│  │ ☐ Gera comissão para o barbeiro    ││
-│  │   Taxa: 30% = R$ 13,50             ││
-│  └─────────────────────────────────────┘│
-│                                         │
-│  [Cancelar]              [Adicionar]    │
-└─────────────────────────────────────────┘
-```
-
-### Seção Produtos no Dialog de Agendamento
-```text
-┌─────────────────────────────────────────┐
-│  Produtos Vendidos                      │
-├─────────────────────────────────────────┤
-│  Pomada Modeladora          2x R$ 35,00 │
-│  ✓ Com comissão (30%)       = R$ 70,00  │
-│                              [Remover]  │
-│─────────────────────────────────────────│
-│  Shampoo Barba              1x R$ 28,00 │
-│  ✗ Sem comissão             = R$ 28,00  │
-│                              [Remover]  │
-├─────────────────────────────────────────┤
-│  Total Produtos:              R$ 98,00  │
-│  [+ Adicionar Produto]                  │
-└─────────────────────────────────────────┘
+### Query: Produtos com Estoque Baixo
+```sql
+SELECT id, name, stock_quantity, min_stock_alert
+FROM products
+WHERE shop_id = ?
+  AND track_stock = true
+  AND is_active = true
+  AND min_stock_alert IS NOT NULL
+  AND stock_quantity <= min_stock_alert
+ORDER BY (stock_quantity - min_stock_alert) ASC
 ```
 
 ---
 
-## 8. Resumo das Entregas
+## 3. Atualizar Dashboard: `DashboardHome.tsx`
+
+### Reorganização dos Cards Principais
+
+**Linha 1: 4 Cards de Métricas**
+```text
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│  Faturamento     │ │  Venda Produtos  │ │  Agendamentos    │ │  Ticket Médio    │
+│  ─────────────   │ │  ─────────────   │ │  ─────────────   │ │                  │
+│  Serviços: R$X   │ │  R$ 450,00       │ │  25              │ │  R$ 85,00        │
+│  Produtos: R$Y   │ │  ▲ +15%          │ │  ▲ +8%           │ │                  │
+│  Total: R$ Z     │ │                  │ │                  │ │                  │
+└──────────────────┘ └──────────────────┘ └──────────────────┘ └──────────────────┘
+```
+
+### Card: Faturamento (Atualizado)
+- Manter ícone DollarSign verde
+- Linha 1: "Serviços: R$ X"
+- Linha 2: "Produtos: R$ Y"
+- Linha 3 (destaque): "Total: R$ Z"
+- Indicador de crescimento baseado no total combinado
+
+### Novo Card: Vendas de Produtos
+- Ícone: ShoppingBag (azul)
+- Valor total de produtos vendidos no período
+- Indicador de crescimento % vs período anterior
+- Texto: "Vendas de Produtos"
+
+### Nova Seção: Produtos Mais Vendidos
+Similar à seção "Serviços Mais Populares" existente:
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  🛒 Produtos Mais Vendidos                                  │
+│  Por quantidade vendida                                     │
+├─────────────────────────────────────────────────────────────┤
+│  1º  Pomada Modeladora                    15x    R$ 525,00  │
+│  2º  Shampoo Anticaspa                    12x    R$ 336,00  │
+│  3º  Óleo para Barba                       8x    R$ 200,00  │
+│  4º  Balm Pós-Barba                        6x    R$ 150,00  │
+│  5º  Cera Matte                            5x    R$ 175,00  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Nova Seção: Alertas de Estoque Baixo
+Card de alerta que aparece APENAS quando há produtos com estoque baixo:
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  ⚠️ Alerta de Estoque Baixo                     [Ver Todos] │
+├─────────────────────────────────────────────────────────────┤
+│  🔴 Pomada Modeladora          2 un (mín: 5)                │
+│  🟠 Shampoo Anticaspa          8 un (mín: 10)               │
+│  🔴 Óleo para Barba            0 un (mín: 3)                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- Ícone de alerta âmbar/laranja
+- Lista de produtos abaixo do mínimo
+- Indicador visual de severidade:
+  - 🔴 Crítico: estoque = 0
+  - 🟠 Baixo: estoque <= min_stock_alert
+- Botão "Ver Todos" → navega para `/dashboard/products`
+- Card só aparece se houver produtos com alerta
+
+---
+
+## 4. Layout Final do Dashboard
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Dashboard                                        [Hoje] [Semana] [Mês]     │
+│  Segunda-feira, 3 de fevereiro de 2025                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐    │
+│  │ Faturamento   │ │ Vendas Prod.  │ │ Agendamentos  │ │ Ticket Médio  │    │
+│  │ Serv: R$X     │ │ R$ 450,00     │ │ 25            │ │ R$ 85,00      │    │
+│  │ Prod: R$Y     │ │ ▲ +15%        │ │ ▲ +8%         │ │               │    │
+│  │ Total: R$Z    │ │               │ │               │ │               │    │
+│  └───────────────┘ └───────────────┘ └───────────────┘ └───────────────┘    │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ ⚠️ Alerta de Estoque Baixo                              [Ver Produtos] │ │
+│  │ Pomada Modeladora (2 un) · Óleo para Barba (0 un) · Shampoo (8 un)    │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌──────────────────────────────┐  ┌──────────────────────────────┐         │
+│  │ Barbeiros Mais Requisitados │  │ Status dos Agendamentos      │         │
+│  │ [Gráfico de barras]         │  │ [Gráfico de pizza]           │         │
+│  └──────────────────────────────┘  └──────────────────────────────┘         │
+│                                                                             │
+│  ┌──────────────────────────────┐  ┌──────────────────────────────┐         │
+│  │ Serviços Mais Populares     │  │ Produtos Mais Vendidos       │         │
+│  │ 1º Corte Degradê   15x      │  │ 1º Pomada Modeladora  15x    │         │
+│  │ 2º Barba Completa  12x      │  │ 2º Shampoo Anticaspa  12x    │         │
+│  │ 3º Corte + Barba   10x      │  │ 3º Óleo para Barba     8x    │         │
+│  └──────────────────────────────┘  └──────────────────────────────┘         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/hooks/useDashboardMetrics.tsx` | Adicionar queries para vendas de produtos, top products e alertas de estoque |
+| `src/pages/dashboard/DashboardHome.tsx` | Adicionar novos cards e reorganizar layout |
+
+---
+
+## 6. Detalhes Técnicos
+
+### Modificação em `useDashboardMetrics.tsx`
+
+```typescript
+// Novas queries a adicionar:
+
+// 1. Vendas de produtos no período atual
+const { data: currentProductSales } = await supabase
+  .from("product_sales")
+  .select("total_price, quantity, product:products(name)")
+  .eq("shop_id", shop.id)
+  .gte("created_at", start.toISOString())
+  .lte("created_at", end.toISOString());
+
+// 2. Vendas de produtos no período anterior
+const { data: previousProductSales } = await supabase
+  .from("product_sales")
+  .select("total_price")
+  .eq("shop_id", shop.id)
+  .gte("created_at", previousStart.toISOString())
+  .lte("created_at", previousEnd.toISOString());
+
+// 3. Produtos com estoque baixo
+const { data: lowStockProducts } = await supabase
+  .from("products")
+  .select("id, name, stock_quantity, min_stock_alert")
+  .eq("shop_id", shop.id)
+  .eq("track_stock", true)
+  .eq("is_active", true)
+  .not("min_stock_alert", "is", null)
+  .lte("stock_quantity", supabase.raw("min_stock_alert"));
+```
+
+### Novas Propriedades no Retorno
+
+```typescript
+return {
+  // Existentes
+  revenue,                    // Renomear para serviceRevenue
+  revenueGrowth,              // Manter (baseado no total)
+  // ...outros existentes
+  
+  // Novos
+  serviceRevenue: revenue,
+  productSalesRevenue,
+  productSalesGrowth,
+  totalRevenue: revenue + productSalesRevenue,
+  topProducts: [
+    { name: "Pomada", quantity: 15, revenue: 525 },
+    // ...
+  ],
+  lowStockProducts: [
+    { id: "...", name: "Pomada", stock: 2, minStock: 5 },
+    // ...
+  ],
+};
+```
+
+---
+
+## 7. Resumo das Entregas
 
 | # | Tarefa | Tipo |
 |---|--------|------|
-| 1 | Criar tabela `product_sales` com RLS e trigger de estoque | Database |
-| 2 | Criar hook `useProductSales.tsx` | Frontend |
-| 3 | Criar componente `AddProductDialog.tsx` | Frontend |
-| 4 | Modificar `AppointmentDetailsDialog.tsx` para incluir produtos | Frontend |
-| 5 | Criar página `Sales.tsx` (PDV) | Frontend |
-| 6 | Adicionar item "Vendas" no sidebar | Frontend |
-| 7 | Adicionar rota `/dashboard/sales` | Frontend |
-| 8 | Atualizar `useCommissionControl.tsx` para incluir comissões de produtos | Frontend |
-
----
-
-## Detalhes Técnicos
-
-### Migração SQL
-```sql
--- Tabela de vendas de produtos
-CREATE TABLE public.product_sales (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  shop_id uuid NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-  appointment_id uuid REFERENCES appointments(id) ON DELETE SET NULL,
-  product_id uuid NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
-  barber_id uuid REFERENCES barbers(id) ON DELETE SET NULL,
-  quantity integer NOT NULL DEFAULT 1,
-  unit_price numeric NOT NULL,
-  total_price numeric NOT NULL,
-  has_commission boolean NOT NULL DEFAULT false,
-  commission_rate numeric DEFAULT 0,
-  commission_amount numeric DEFAULT 0,
-  client_name text,
-  client_phone text,
-  payment_method text,
-  notes text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
--- Índices
-CREATE INDEX idx_product_sales_shop_id ON public.product_sales(shop_id);
-CREATE INDEX idx_product_sales_appointment_id ON public.product_sales(appointment_id);
-CREATE INDEX idx_product_sales_barber_id ON public.product_sales(barber_id);
-CREATE INDEX idx_product_sales_created_at ON public.product_sales(created_at);
-
--- RLS
-ALTER TABLE public.product_sales ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Shop owners can manage product sales"
-  ON public.product_sales FOR ALL
-  USING (EXISTS (
-    SELECT 1 FROM shops WHERE shops.id = product_sales.shop_id 
-    AND shops.owner_id = auth.uid()
-  ));
-
-CREATE POLICY "Barbers can view their own sales"
-  ON public.product_sales FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM barbers 
-    WHERE barbers.id = product_sales.barber_id 
-    AND barbers.user_id = auth.uid()
-  ));
-
--- Função para decrementar estoque
-CREATE OR REPLACE FUNCTION decrement_product_stock()
-RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE products 
-  SET stock_quantity = stock_quantity - NEW.quantity
-  WHERE id = NEW.product_id 
-    AND track_stock = true;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Trigger para decrementar estoque na venda
-CREATE TRIGGER on_product_sale_decrement_stock
-  AFTER INSERT ON public.product_sales
-  FOR EACH ROW
-  EXECUTE FUNCTION decrement_product_stock();
-```
-
----
-
-## Próximos Passos (Futuro)
-- Relatório de vendas de produtos por período
-- Histórico de movimentação de estoque
-- Devolução/estorno de vendas com reposição de estoque
-- Integração com impressora de cupom fiscal
+| 1 | Adicionar queries de vendas de produtos em `useDashboardMetrics` | Hook |
+| 2 | Adicionar query de produtos com estoque baixo | Hook |
+| 3 | Atualizar card de Faturamento com separação serviços/produtos | UI |
+| 4 | Adicionar novo card de Vendas de Produtos | UI |
+| 5 | Adicionar seção Produtos Mais Vendidos | UI |
+| 6 | Adicionar card de Alertas de Estoque Baixo | UI |
+| 7 | Reorganizar layout do dashboard | UI |
