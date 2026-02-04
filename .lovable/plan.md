@@ -1,85 +1,180 @@
 
+# Plano de Ação: Cadastro de Produtos
 
-# Correção do Formato do Telefone para AbacatePay
+## Visão Geral
+Implementar uma nova funcionalidade de cadastro de produtos para a barbearia, permitindo controle opcional de estoque por produto. A estrutura seguirá o mesmo padrão já utilizado em Serviços (`Services.tsx` + `useServices.tsx`).
 
-## Problema Identificado
+---
 
-Após análise da documentação da AbacatePay e do banco de dados:
+## 1. Criação da Tabela no Banco de Dados
 
-**Formato atual enviado:** `19998733540` (apenas dígitos)
-**Formato esperado pela AbacatePay:** `(19) 99873-3540` (formatado com parênteses e hífen)
+### Tabela: `products`
 
-A documentação da AbacatePay mostra claramente no exemplo:
-```json
-{
-  "cellphone": "(11) 4002-8922"
-}
-```
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | uuid | Identificador único (PK) |
+| `shop_id` | uuid | Referência à barbearia (FK) |
+| `name` | text | Nome do produto |
+| `description` | text | Descrição do produto (opcional) |
+| `price` | numeric | Preço de venda |
+| `cost_price` | numeric | Preço de custo (opcional) |
+| `sku` | text | Código/SKU do produto (opcional) |
+| `image_url` | text | URL da imagem do produto (opcional) |
+| `track_stock` | boolean | Controlar estoque? (default: false) |
+| `stock_quantity` | integer | Quantidade em estoque (default: 0) |
+| `min_stock_alert` | integer | Alerta de estoque mínimo (opcional) |
+| `is_active` | boolean | Produto ativo? (default: true) |
+| `created_at` | timestamptz | Data de criação |
+| `updated_at` | timestamptz | Data de atualização |
 
-A AbacatePay exibe o telefone com `+55` na frente automaticamente, mas espera receber o número no formato brasileiro com DDD entre parênteses.
+### Políticas RLS
+- Donos podem gerenciar produtos da sua barbearia
+- Leitura pública para lojas ativas (para futuro uso em vitrine/loja)
 
-## Solução
+---
 
-Modificar a função `normalizeCellphone` na edge function `create-abacatepay-billing` para:
-
-1. Extrair apenas os dígitos
-2. Remover o prefixo `55` se presente
-3. **Formatar como `(DDD) XXXXX-XXXX` ou `(DDD) XXXX-XXXX`** dependendo se é celular (9 dígitos) ou fixo (8 dígitos)
-
-## Arquivo a Modificar
-
-**`supabase/functions/create-abacatepay-billing/index.ts`**
-
-## Nova Lógica da Função
+## 2. Estrutura de Arquivos
 
 ```text
-Entrada: "+5519998733540" ou "5519998733540" ou "(19) 99873-3540"
-         ↓
-Extrair dígitos: "5519998733540"
-         ↓
-Remover 55 se presente: "19998733540"
-         ↓
-Validar comprimento: 10-11 dígitos ✓
-         ↓
-Formatar: "(19) 99873-3540"
-         ↓
-Saída: "(19) 99873-3540"
+src/
+├── hooks/
+│   └── useProducts.tsx          # Hook com queries e mutations
+├── pages/dashboard/
+│   └── Products.tsx             # Página de listagem e cadastro
 ```
 
-## Código Atualizado
+---
 
-```typescript
-const normalizeCellphone = (value: string | null | undefined) => {
-  if (!value) return null;
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return null;
+## 3. Hook: `useProducts.tsx`
 
-  // Remove country code if present, keep only DDD + number
-  const withoutCountry = digits.startsWith("55") ? digits.slice(2) : digits;
+Seguirá o padrão de `useServices.tsx`:
+- `useProducts()` - Listar produtos da loja
+- `useCreateProduct()` - Criar novo produto
+- `useUpdateProduct()` - Atualizar produto
+- `useDeleteProduct()` - Excluir produto
 
-  // BR: DDD(2) + phone(8-9) => 10-11 digits
-  if (withoutCountry.length < 10 || withoutCountry.length > 11) return null;
+---
 
-  // Format as (DDD) XXXXX-XXXX or (DDD) XXXX-XXXX
-  const ddd = withoutCountry.slice(0, 2);
-  const rest = withoutCountry.slice(2);
-  
-  if (rest.length === 9) {
-    // Celular: (XX) XXXXX-XXXX
-    return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-  } else {
-    // Fixo: (XX) XXXX-XXXX
-    return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-  }
-};
+## 4. Página: `Products.tsx`
+
+### Layout
+- Header com título "Produtos" e botão "Novo Produto"
+- Grid de cards com os produtos cadastrados
+- Cada card mostra: nome, preço, status de estoque (se ativo), ações de editar/excluir
+
+### Modal de Cadastro/Edição
+Campos do formulário:
+- **Nome** (obrigatório)
+- **Descrição** (opcional, textarea)
+- **Preço de Venda** (obrigatório, R$)
+- **Preço de Custo** (opcional, R$)
+- **Código/SKU** (opcional)
+- **Imagem** (upload opcional)
+- **Controlar Estoque** (switch toggle)
+- Se ativado:
+  - Quantidade em Estoque
+  - Alerta de Estoque Mínimo
+- **Produto Ativo** (switch toggle)
+
+---
+
+## 5. Navegação
+
+### Sidebar do Dashboard
+Adicionar novo item no menu:
+```
+{ title: "Produtos", url: "/dashboard/products", icon: Package }
 ```
 
-## Resultado Esperado
+Posição: Entre "Serviços" e "Equipe" para manter coerência.
 
-| Entrada no banco           | Saída formatada        |
-|----------------------------|------------------------|
-| `(19) 99873-3540`          | `(19) 99873-3540`      |
-| `+5519998733540`           | `(19) 99873-3540`      |
-| `5519998733540`            | `(19) 99873-3540`      |
-| `19998733540`              | `(19) 99873-3540`      |
+### Rotas
+Adicionar em `App.tsx`:
+```
+<Route path="products" element={<Products />} />
+```
 
+---
+
+## 6. Detalhes Técnicos
+
+### Migração SQL
+```sql
+CREATE TABLE public.products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  shop_id uuid NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  description text,
+  price numeric NOT NULL,
+  cost_price numeric,
+  sku text,
+  image_url text,
+  track_stock boolean NOT NULL DEFAULT false,
+  stock_quantity integer NOT NULL DEFAULT 0,
+  min_stock_alert integer,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Índices
+CREATE INDEX idx_products_shop_id ON public.products(shop_id);
+CREATE INDEX idx_products_sku ON public.products(shop_id, sku) WHERE sku IS NOT NULL;
+
+-- RLS
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Shop owners can manage their products"
+  ON public.products FOR ALL
+  USING (EXISTS (
+    SELECT 1 FROM shops WHERE shops.id = products.shop_id AND shops.owner_id = auth.uid()
+  ));
+
+CREATE POLICY "Anyone can view products of active shops"
+  ON public.products FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM shops WHERE shops.id = products.shop_id AND shops.is_active = true
+  ));
+```
+
+### Componentes UI Utilizados
+- Dialog, Input, Label, Textarea, Switch, Button (já existentes)
+- ImageUpload (já existe em `src/components/ui/image-upload.tsx`)
+- Card com variante "elevated"
+- AlertDialog para confirmação de exclusão
+
+---
+
+## 7. Funcionalidades Visuais
+
+### Card do Produto
+- Imagem do produto (ou placeholder)
+- Nome e descrição resumida
+- Preço formatado (R$ XX,XX)
+- Badge indicando status: "Ativo" / "Inativo"
+- Se `track_stock = true`: mostrar quantidade e alerta visual se abaixo do mínimo
+- Botões de editar/excluir
+
+### Indicadores de Estoque
+- Verde: estoque normal
+- Amarelo: próximo do mínimo
+- Vermelho: abaixo do mínimo ou zerado
+
+---
+
+## Resumo das Entregas
+
+| # | Tarefa | Tipo |
+|---|--------|------|
+| 1 | Criar tabela `products` com RLS | Database |
+| 2 | Criar hook `useProducts.tsx` | Frontend |
+| 3 | Criar página `Products.tsx` | Frontend |
+| 4 | Adicionar rota `/dashboard/products` | Frontend |
+| 5 | Adicionar item "Produtos" no sidebar | Frontend |
+
+---
+
+## Próximos Passos (Futuro)
+- Integração de produtos com agendamentos (venda de produtos junto com serviços)
+- Relatório de movimentação de estoque
+- Histórico de vendas de produtos
