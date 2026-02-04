@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
 import Services from "./pages/dashboard/Services";
+import Products from "./pages/dashboard/Products";
 import Team from "./pages/dashboard/Team";
 import Schedule from "./pages/dashboard/Schedule";
 import Clients from "./pages/dashboard/Clients";
@@ -76,6 +77,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardHome />} />
               <Route path="services" element={<Services />} />
+              <Route path="products" element={<Products />} />
               <Route path="team" element={<Team />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="clients" element={<Clients />} />
