@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 interface ImageUploadProps {
   label: string;
-  bucket: "shop-logos" | "shop-covers" | "barber-avatars";
+  bucket: "shop-logos" | "shop-covers" | "barber-avatars" | "barber-portfolio" | "product-images";
   path: string;
   currentImageUrl?: string | null;
   onUploadComplete: (url: string) => void;
