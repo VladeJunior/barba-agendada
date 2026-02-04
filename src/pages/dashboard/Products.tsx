@@ -243,7 +243,7 @@ export default function Products() {
               <div className="space-y-2">
                 <ImageUpload
                   label="Imagem do Produto"
-                  bucket="shop-logos"
+                  bucket="product-images"
                   path="products"
                   currentImageUrl={formData.image_url || null}
                   onUploadComplete={(url) => setFormData({ ...formData, image_url: url })}
