@@ -57,6 +57,9 @@ export function useCommissionSummary(filters: CommissionFilters) {
           barber_id,
           final_price,
           original_price,
+          service:services!inner(
+            price
+          ),
           barbers!inner(
             id,
             name,
@@ -116,8 +119,10 @@ export function useCommissionSummary(filters: CommissionFilters) {
       // Process service appointments
       appointments?.forEach((apt) => {
         const barber = apt.barbers as any;
+        const service = apt.service as any;
         const barberId = apt.barber_id;
-        const price = Number(apt.final_price || apt.original_price || 0);
+        // Use final_price, then original_price, then service price as fallback
+        const price = Number(apt.final_price || apt.original_price || service?.price || 0);
         const rate = Number(barber?.commission_rate || 0);
 
         if (!barberMap.has(barberId)) {
