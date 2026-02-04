@@ -16,6 +16,20 @@ interface AppointmentWithRelations {
   service: { name: string; price: number } | null;
 }
 
+interface ProductSaleWithProduct {
+  total_price: number;
+  quantity: number;
+  product_id: string;
+  product: { name: string } | null;
+}
+
+interface LowStockProduct {
+  id: string;
+  name: string;
+  stock_quantity: number;
+  min_stock_alert: number | null;
+}
+
 export function useDashboardMetrics(period: PeriodType) {
   const { data: shop } = useShop();
 
@@ -71,17 +85,55 @@ export function useDashboardMetrics(period: PeriodType) {
 
       if (previousError) throw previousError;
 
+      // Fetch current period product sales
+      const { data: currentProductSales, error: productSalesError } = await supabase
+        .from("product_sales")
+        .select("total_price, quantity, product_id, product:products(name)")
+        .eq("shop_id", shop.id)
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString());
+
+      if (productSalesError) throw productSalesError;
+
+      // Fetch previous period product sales
+      const { data: previousProductSales, error: prevProductSalesError } = await supabase
+        .from("product_sales")
+        .select("total_price")
+        .eq("shop_id", shop.id)
+        .gte("created_at", previousStart.toISOString())
+        .lte("created_at", previousEnd.toISOString());
+
+      if (prevProductSalesError) throw prevProductSalesError;
+
+      // Fetch low stock products
+      const { data: lowStockData, error: lowStockError } = await supabase
+        .from("products")
+        .select("id, name, stock_quantity, min_stock_alert")
+        .eq("shop_id", shop.id)
+        .eq("track_stock", true)
+        .eq("is_active", true)
+        .not("min_stock_alert", "is", null);
+
+      if (lowStockError) throw lowStockError;
+
+      // Filter low stock products in JS (since we can't do column comparison in Supabase)
+      const lowStockProducts = (lowStockData || []).filter(
+        (p: LowStockProduct) => p.min_stock_alert !== null && p.stock_quantity <= p.min_stock_alert
+      ).sort((a: LowStockProduct, b: LowStockProduct) => a.stock_quantity - b.stock_quantity);
+
       const appointments = (currentAppointments || []) as AppointmentWithRelations[];
       const prevAppointments = previousAppointments || [];
+      const productSales = (currentProductSales || []) as ProductSaleWithProduct[];
+      const prevProductSales = previousProductSales || [];
 
-      // Calculate metrics
+      // Calculate appointment metrics
       const totalAppointments = appointments.filter(a => a.status !== "cancelled").length;
       const completedAppointments = appointments.filter(a => a.status === "completed");
       const cancelledAppointments = appointments.filter(a => a.status === "cancelled").length;
       const noShowAppointments = appointments.filter(a => a.status === "no_show").length;
 
-      const revenue = completedAppointments.reduce((sum, a) => sum + (a.service?.price || 0), 0);
-      const prevRevenue = prevAppointments
+      const serviceRevenue = completedAppointments.reduce((sum, a) => sum + (a.service?.price || 0), 0);
+      const prevServiceRevenue = prevAppointments
         .filter(a => a.status === "completed")
         .reduce((sum, a) => {
           const service = a.service as { price: number } | null;
@@ -90,14 +142,28 @@ export function useDashboardMetrics(period: PeriodType) {
 
       const prevTotal = prevAppointments.filter(a => a.status !== "cancelled").length;
 
-      // Revenue growth percentage
-      const revenueGrowth = prevRevenue > 0 
-        ? ((revenue - prevRevenue) / prevRevenue) * 100 
-        : revenue > 0 ? 100 : 0;
+      // Calculate product sales metrics
+      const productSalesRevenue = productSales.reduce((sum, ps) => sum + (ps.total_price || 0), 0);
+      const productSalesCount = productSales.length;
+      const prevProductSalesRevenue = prevProductSales.reduce((sum, ps) => sum + (ps.total_price || 0), 0);
+
+      // Calculate total revenue
+      const totalRevenue = serviceRevenue + productSalesRevenue;
+      const prevTotalRevenue = prevServiceRevenue + prevProductSalesRevenue;
+
+      // Revenue growth percentage (based on total)
+      const revenueGrowth = prevTotalRevenue > 0 
+        ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 
+        : totalRevenue > 0 ? 100 : 0;
 
       const appointmentGrowth = prevTotal > 0 
         ? ((totalAppointments - prevTotal) / prevTotal) * 100 
         : totalAppointments > 0 ? 100 : 0;
+
+      // Product sales growth
+      const productSalesGrowth = prevProductSalesRevenue > 0
+        ? ((productSalesRevenue - prevProductSalesRevenue) / prevProductSalesRevenue) * 100
+        : productSalesRevenue > 0 ? 100 : 0;
 
       // Top barbers
       const barberStats: Record<string, { name: string; count: number; revenue: number }> = {};
@@ -131,6 +197,22 @@ export function useDashboardMetrics(period: PeriodType) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
+      // Top products
+      const productStats: Record<string, { name: string; quantity: number; revenue: number }> = {};
+      productSales.forEach(ps => {
+        const productId = ps.product_id;
+        const productName = ps.product?.name || "Desconhecido";
+        if (!productStats[productId]) {
+          productStats[productId] = { name: productName, quantity: 0, revenue: 0 };
+        }
+        productStats[productId].quantity += ps.quantity;
+        productStats[productId].revenue += ps.total_price;
+      });
+
+      const topProducts = Object.values(productStats)
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
       // Status breakdown
       const statusBreakdown = [
         { name: "Concluídos", value: completedAppointments.length, color: "#22c55e" },
@@ -144,13 +226,19 @@ export function useDashboardMetrics(period: PeriodType) {
         completedAppointments: completedAppointments.length,
         cancelledAppointments,
         noShowAppointments,
-        revenue,
+        serviceRevenue,
+        productSalesRevenue,
+        productSalesCount,
+        productSalesGrowth,
+        totalRevenue,
         revenueGrowth,
         appointmentGrowth,
         topBarbers,
         topServices,
+        topProducts,
+        lowStockProducts,
         statusBreakdown,
-        averageTicket: completedAppointments.length > 0 ? revenue / completedAppointments.length : 0,
+        averageTicket: completedAppointments.length > 0 ? serviceRevenue / completedAppointments.length : 0,
       };
     },
     enabled: !!shop,

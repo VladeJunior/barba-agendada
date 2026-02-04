@@ -256,7 +256,7 @@ export default function Reports() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {renderMetricCard(
               "Faturamento Total",
-              formatCurrency(metrics?.revenue || 0),
+              formatCurrency(metrics?.totalRevenue || 0),
               metrics?.revenueGrowth,
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             )}
