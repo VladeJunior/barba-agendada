@@ -29,6 +29,7 @@ import Reports from "./pages/dashboard/Reports";
 import Settings from "./pages/dashboard/Settings";
 import Plans from "./pages/dashboard/Plans";
 import Loyalty from "./pages/dashboard/Loyalty";
+import Sales from "./pages/dashboard/Sales";
 import BarberSchedule from "./pages/dashboard/BarberSchedule";
 import BarberCommission from "./pages/dashboard/BarberCommission";
 import BarberDashboardHome from "./pages/dashboard/BarberDashboardHome";
@@ -78,6 +79,7 @@ function App() {
               <Route index element={<DashboardHome />} />
               <Route path="services" element={<Services />} />
               <Route path="products" element={<Products />} />
+              <Route path="sales" element={<Sales />} />
               <Route path="team" element={<Team />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="clients" element={<Clients />} />

@@ -71,6 +71,30 @@ export function useCommissionSummary(filters: CommissionFilters) {
 
       if (error) throw error;
 
+      // Get product sales with commission in the period
+      const { data: productSales, error: productSalesError } = await supabase
+        .from("product_sales")
+        .select(`
+          id,
+          barber_id,
+          total_price,
+          has_commission,
+          commission_rate,
+          commission_amount,
+          barbers(
+            id,
+            name,
+            avatar_url,
+            commission_rate
+          )
+        `)
+        .eq("shop_id", shop.id)
+        .eq("has_commission", true)
+        .gte("created_at", filters.startDate.toISOString())
+        .lte("created_at", filters.endDate.toISOString());
+
+      if (productSalesError) throw productSalesError;
+
       // Get existing payments for the period
       const { data: payments, error: paymentsError } = await supabase
         .from("commission_payments")
@@ -82,8 +106,14 @@ export function useCommissionSummary(filters: CommissionFilters) {
       if (paymentsError) throw paymentsError;
 
       // Group by barber
-      const barberMap = new Map<string, BarberCommissionSummary>();
+      const barberMap = new Map<string, BarberCommissionSummary & { 
+        service_revenue: number;
+        service_commission: number;
+        product_revenue: number;
+        product_commission: number;
+      }>();
 
+      // Process service appointments
       appointments?.forEach((apt) => {
         const barber = apt.barbers as any;
         const barberId = apt.barber_id;
@@ -101,12 +131,53 @@ export function useCommissionSummary(filters: CommissionFilters) {
             amount_paid: 0,
             pending_amount: 0,
             status: "pending",
+            service_revenue: 0,
+            service_commission: 0,
+            product_revenue: 0,
+            product_commission: 0,
           });
         }
 
         const summary = barberMap.get(barberId)!;
+        summary.service_revenue += price;
+        summary.service_commission += price * (rate / 100);
         summary.total_revenue += price;
         summary.commission_amount += price * (rate / 100);
+      });
+
+      // Process product sales
+      productSales?.forEach((sale) => {
+        const barber = sale.barbers as any;
+        const barberId = sale.barber_id;
+        if (!barberId) return;
+
+        const totalPrice = Number(sale.total_price || 0);
+        const commissionAmount = Number(sale.commission_amount || 0);
+        const rate = Number(barber?.commission_rate || 0);
+
+        if (!barberMap.has(barberId)) {
+          barberMap.set(barberId, {
+            barber_id: barberId,
+            barber_name: barber?.name || "Barbeiro",
+            barber_avatar: barber?.avatar_url,
+            commission_rate: rate,
+            total_revenue: 0,
+            commission_amount: 0,
+            amount_paid: 0,
+            pending_amount: 0,
+            status: "pending",
+            service_revenue: 0,
+            service_commission: 0,
+            product_revenue: 0,
+            product_commission: 0,
+          });
+        }
+
+        const summary = barberMap.get(barberId)!;
+        summary.product_revenue += totalPrice;
+        summary.product_commission += commissionAmount;
+        summary.total_revenue += totalPrice;
+        summary.commission_amount += commissionAmount;
       });
 
       // Apply payments

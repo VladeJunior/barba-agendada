@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { AppointmentProductsList } from "./AppointmentProductsList";
+import { useAppointmentProductSales } from "@/hooks/useProductSales";
+import { useMemo } from "react";
 
 interface Appointment {
   id: string;
@@ -20,6 +23,7 @@ interface Appointment {
   final_price?: number | null;
   barber?: {
     name: string;
+    commission_rate?: number | null;
   } | null;
   service?: {
     name: string;
@@ -55,17 +59,27 @@ export function AppointmentDetailsDialog({
   onNoShow,
   onCancel,
 }: AppointmentDetailsDialogProps) {
+  const { data: productSales = [] } = useAppointmentProductSales(appointment?.id || null);
+
+  const totalProducts = useMemo(() => 
+    productSales.reduce((sum, sale) => sum + sale.total_price, 0),
+    [productSales]
+  );
+
   if (!appointment) return null;
 
   const start = parseISO(appointment.start_time);
   const end = parseISO(appointment.end_time);
   const duration = differenceInMinutes(end, start);
-  const price = appointment.final_price ?? appointment.service?.price ?? 0;
+  const servicePrice = appointment.final_price ?? appointment.service?.price ?? 0;
   const hasDiscount = appointment.discount_amount && appointment.discount_amount > 0;
+  const totalPrice = servicePrice + totalProducts;
+  const canEdit = appointment.status === "confirmed" || appointment.status === "scheduled";
+  const barberCommissionRate = appointment.barber?.commission_rate ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden max-h-[90vh] overflow-y-auto">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-xl font-semibold">Detalhes do Agendamento</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -147,11 +161,11 @@ export function AppointmentDetailsDialog({
           
           <Separator className="bg-border/50" />
           
-          {/* Price */}
+          {/* Service Price */}
           <div className="flex items-center justify-between py-2">
             <span className="text-muted-foreground flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
-              Valor
+              Valor Serviço
             </span>
             <div className="flex items-center gap-2">
               {hasDiscount && (
@@ -159,11 +173,32 @@ export function AppointmentDetailsDialog({
                   R$ {appointment.service?.price?.toFixed(2)}
                 </span>
               )}
-              <span className="font-semibold text-gold text-lg">
-                R$ {price.toFixed(2)}
+              <span className="font-semibold">
+                R$ {servicePrice.toFixed(2)}
               </span>
             </div>
           </div>
+          
+          {/* Products Section */}
+          <AppointmentProductsList
+            appointmentId={appointment.id}
+            barberId={appointment.barber_id}
+            barberCommissionRate={barberCommissionRate}
+            canEdit={canEdit}
+          />
+          
+          {/* Total Price */}
+          {totalProducts > 0 && (
+            <>
+              <Separator className="bg-border/50" />
+              <div className="flex items-center justify-between py-2 bg-muted/30 rounded-lg px-3">
+                <span className="font-medium">Total Geral</span>
+                <span className="font-bold text-gold text-lg">
+                  R$ {totalPrice.toFixed(2)}
+                </span>
+              </div>
+            </>
+          )}
           
           <Separator className="bg-border/50" />
           

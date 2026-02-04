@@ -753,6 +753,92 @@ export type Database = {
         }
         Relationships: []
       }
+      product_sales: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          commission_amount: number | null
+          commission_rate: number | null
+          created_at: string
+          has_commission: boolean
+          id: string
+          notes: string | null
+          payment_method: string | null
+          product_id: string
+          quantity: number
+          shop_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          created_at?: string
+          has_commission?: boolean
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          product_id: string
+          quantity?: number
+          shop_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          created_at?: string
+          has_commission?: boolean
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          product_id?: string
+          quantity?: number
+          shop_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sales_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           cost_price: number | null
