@@ -80,7 +80,7 @@ export function ReturnCampaignDialog({
           body: {
             shopId,
             phone: client.client_phone,
-            customMessage: personalizedMessage,
+            message: personalizedMessage,
           },
         });
 
