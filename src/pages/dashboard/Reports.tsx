@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useDashboardMetrics, PeriodType } from "@/hooks/useDashboardMetrics";
 import { useRevenueChart } from "@/hooks/useRevenueChart";
 import { useOperationalMetrics } from "@/hooks/useOperationalMetrics";
-import { TrendingUp, TrendingDown, DollarSign, Calendar as CalendarIcon, Users, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Calendar as CalendarIcon, Users, Download, FileSpreadsheet, FileText, Package } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ import {
   exportServicesToExcel,
   exportServicesToPDF,
 } from "@/lib/exportUtils";
+import { ProductSalesReportTab } from "@/components/reports/ProductSalesReportTab";
 import { toast } from "sonner";
 
 type DateRange = {
@@ -222,8 +223,9 @@ export default function Reports() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="revenue">Faturamento</TabsTrigger>
+          <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="barbers">Barbeiros</TabsTrigger>
           <TabsTrigger value="services">Serviços</TabsTrigger>
           <TabsTrigger value="operational">Operacional</TabsTrigger>
@@ -336,6 +338,13 @@ export default function Reports() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="products" className="space-y-6">
+          <ProductSalesReportTab 
+            period={period as any} 
+            customRange={customRange}
+          />
         </TabsContent>
 
         <TabsContent value="barbers" className="space-y-6">

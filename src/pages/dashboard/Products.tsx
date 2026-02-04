@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -33,6 +33,7 @@ import {
   useDeleteProduct,
   Product,
 } from "@/hooks/useProducts";
+import { StockHistoryDialog } from "@/components/products/StockHistoryDialog";
 
 interface ProductFormData {
   name: string;
@@ -69,6 +70,7 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
+  const [stockHistoryProduct, setStockHistoryProduct] = useState<Product | null>(null);
 
   const handleOpenDialog = (product?: Product) => {
     if (product) {
@@ -419,6 +421,16 @@ export default function Products() {
                       <Pencil className="h-4 w-4 mr-1" />
                       Editar
                     </Button>
+                    {product.track_stock && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStockHistoryProduct(product)}
+                        title="Histórico de estoque"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    )}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" className="text-destructive">
@@ -451,6 +463,12 @@ export default function Products() {
           })}
         </div>
       )}
+
+      <StockHistoryDialog
+        product={stockHistoryProduct}
+        open={!!stockHistoryProduct}
+        onOpenChange={(open) => !open && setStockHistoryProduct(null)}
+      />
     </div>
   );
 }
