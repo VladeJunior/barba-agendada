@@ -753,6 +753,65 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          cost_price: number | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          min_stock_alert: number | null
+          name: string
+          price: number
+          shop_id: string
+          sku: string | null
+          stock_quantity: number
+          track_stock: boolean
+          updated_at: string
+        }
+        Insert: {
+          cost_price?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_stock_alert?: number | null
+          name: string
+          price: number
+          shop_id: string
+          sku?: string | null
+          stock_quantity?: number
+          track_stock?: boolean
+          updated_at?: string
+        }
+        Update: {
+          cost_price?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_stock_alert?: number | null
+          name?: string
+          price?: number
+          shop_id?: string
+          sku?: string | null
+          stock_quantity?: number
+          track_stock?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
